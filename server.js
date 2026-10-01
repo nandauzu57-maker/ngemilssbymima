@@ -11,9 +11,10 @@ const nodemailer = require('nodemailer');
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const dataDirectory = path.join(__dirname, 'data');
-mkdirSync(dataDirectory, { recursive: true });
+const runtimeDataDirectory = process.env.VERCEL ? path.join('/tmp', 'ngemilssby-mima') : dataDirectory;
+mkdirSync(runtimeDataDirectory, { recursive: true });
 
-const database = new DatabaseSync(path.join(dataDirectory, 'dapur-rasa.sqlite'));
+const database = new DatabaseSync(path.join(runtimeDataDirectory, 'dapur-rasa.sqlite'));
 database.exec(`
   PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS courses (
@@ -671,15 +672,21 @@ app.use((error, _request, response, _next) => {
   response.status(500).json({ error: 'Terjadi kesalahan pada server.' });
 });
 
-const server = app.listen(port, () => {
-  console.log(`ngemilssby.mima berjalan di http://localhost:${port}`);
-});
+let server;
+if (require.main === module) {
+  server = app.listen(port, () => {
+    console.log(`ngemilssby.mima berjalan di http://localhost:${port}`);
+  });
+}
 
 function shutdown() {
-  server.close(() => {
+  const closeServer = server ? callback => server.close(callback) : callback => callback();
+  closeServer(() => {
     database.close();
     process.exit(0);
   });
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+module.exports = app;
