@@ -174,13 +174,36 @@
         setNotice('Browser ini tidak mendukung notifikasi.', 'error');
         return;
       }
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        notificationButton.textContent = 'Notifikasi aktif';
-        notificationButton.disabled = true;
-        setNotice('Notifikasi order sudah aktif di browser ini.', 'success');
-      } else {
-        setNotice('Izin notifikasi belum diberikan. Aktifkan dari pengaturan browser.', 'error');
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setNotice('Push notification tidak didukung browser ini. Di iPhone, buka dari ikon Home Screen.', 'error');
+        return;
+      }
+      if (!tokenInput.value.trim() || !pinInput.value.trim()) {
+        setNotice('Masukkan token dan PIN admin sebelum mendaftarkan notifikasi.', 'error');
+        return;
+      }
+
+      notificationButton.disabled = true;
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') throw new Error('Izin notifikasi belum diberikan. Aktifkan dari pengaturan browser.');
+        const keyResponse = await fetch('/api/push/public-key', { cache: 'no-store' });
+        const keyResult = await keyResponse.json();
+        if (!keyResponse.ok) throw new Error(keyResult.error || 'Konfigurasi push belum tersedia.');
+        const applicationServerKey = Uint8Array.from(atob(`${keyResult.publicKey.replace(/-/g, '+').replace(/_/g, '/')}${'='.repeat((4 - keyResult.publicKey.length % 4) % 4)}`), character => character.charCodeAt(0));
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription()
+          || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+        await adminRequest('/api/admin/push-subscriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: subscription.toJSON() })
+        });
+        notificationButton.textContent = 'Notifikasi aktif di perangkat ini';
+        setNotice('Perangkat ini berhasil didaftarkan untuk menerima notifikasi order dan pembayaran.', 'success');
+      } catch (error) {
+        setNotice(error.message || 'Notifikasi tidak dapat diaktifkan.', 'error');
+        notificationButton.disabled = false;
       }
     }
 
@@ -205,10 +228,7 @@
         installButton.hidden = true;
       });
       notificationButton.addEventListener('click', enableNotifications);
-      if ('Notification' in window && Notification.permission === 'granted') {
-        notificationButton.textContent = 'Notifikasi aktif';
-        notificationButton.disabled = true;
-      }
+      if ('Notification' in window && Notification.permission === 'granted') notificationButton.textContent = 'Daftarkan perangkat ini';
     }
 
     function detectNewOrders(orders) {

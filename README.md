@@ -17,6 +17,10 @@ Untuk menampilkan halaman maintenance kepada pengunjung, tambahkan `MAINTENANCE_
 
 Checkout menerima domisili Indonesia dan Malaysia. Harga Indonesia tetap mengikuti katalog, sedangkan harga Malaysia memakai pengali `MALAYSIA_PRICE_MULTIPLIER` (default `1.35`), dibulatkan ke ribuan terdekat, lalu ditampilkan dalam MYR memakai kurs `MALAYSIA_IDR_PER_MYR` (default `3500`). Pembayaran tetap hanya melalui QRIS; nominal QRIS selalu ditampilkan dalam Rupiah.
 
+## Push notification admin
+
+Push notification membutuhkan tabel `public.push_subscriptions` di Supabase dan environment variables `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, dan `VAPID_SUBJECT` di server. Jangan pernah menaruh service-role atau private VAPID key di frontend. Buat pasangan VAPID secara lokal dengan `npx web-push generate-vapid-keys`, lalu masukkan hasilnya langsung ke environment variables Vercel. Admin harus membuka situs melalui HTTPS, memasukkan token dan PIN, lalu memilih **Aktifkan notifikasi order** pada perangkat yang ingin menerima push.
+
 ## Struktur folder
 
 - `index.html`, `admin.html`, `server.js` - halaman toko, admin, dan backend.

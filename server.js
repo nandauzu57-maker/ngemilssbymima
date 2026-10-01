@@ -7,6 +7,7 @@ const { existsSync, mkdirSync, renameSync, unlinkSync, writeFileSync } = require
 const { DatabaseSync } = require('node:sqlite');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const webpush = require('web-push');
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -84,6 +85,48 @@ const supportedCountries = {
   MY: { name: 'Malaysia', multiplier: Number.isFinite(malaysiaPriceMultiplier) && malaysiaPriceMultiplier > 1 ? malaysiaPriceMultiplier : 1.35 }
 };
 const formatMalaysiaPrice = price => Math.round(price / (Number.isFinite(malaysiaIdrPerMyr) && malaysiaIdrPerMyr > 0 ? malaysiaIdrPerMyr : 3500) * 100) / 100;
+const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
+
+async function supabaseRequest(resource, options = {}) {
+  if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase belum dikonfigurasi.');
+  const result = await fetch(`${supabaseUrl}/rest/v1/${resource}`, {
+    ...options,
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (!result.ok) throw new Error(`Supabase request gagal (${result.status}): ${await result.text()}`);
+  return result;
+}
+
+async function sendAdminPush(notification) {
+  if (!supabaseUrl || !supabaseServiceKey || !vapidPublicKey || !vapidPrivateKey) return;
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@example.com', vapidPublicKey, vapidPrivateKey);
+    const response = await supabaseRequest('push_subscriptions?select=id,endpoint,p256dh,auth');
+    const subscriptions = await response.json();
+    await Promise.all(subscriptions.map(async stored => {
+      try {
+        await webpush.sendNotification({ endpoint: stored.endpoint, keys: { p256dh: stored.p256dh, auth: stored.auth } }, JSON.stringify(notification));
+      } catch (error) {
+        if (error.statusCode === 404 || error.statusCode === 410) {
+          const filter = new URLSearchParams({ endpoint: `eq.${stored.endpoint}` });
+          await supabaseRequest(`push_subscriptions?${filter}`, { method: 'DELETE' }).catch(() => {});
+        } else {
+          console.error('Gagal mengirim push notification:', error.message);
+        }
+      }
+    }));
+  } catch (error) {
+    console.error('Gagal memproses push notification:', error.message);
+  }
+}
 const maintenancePage = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -270,6 +313,11 @@ app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok' });
 });
 
+app.get('/api/push/public-key', (_request, response) => {
+  if (!vapidPublicKey) return response.status(503).json({ error: 'Push notification belum dikonfigurasi.' });
+  response.set('Cache-Control', 'no-store').json({ publicKey: vapidPublicKey });
+});
+
 app.get('/api/courses', (_request, response) => {
   const courses = database.prepare(`
     SELECT id, title, category, level, duration, rating, students, price,
@@ -421,6 +469,40 @@ function removeCourseImages(courseId) {
 
     app.use('/api/admin', authenticateAdmin);
 
+    app.post('/api/admin/push-subscriptions', async (request, response) => {
+      const subscription = request.body?.subscription;
+      const endpoint = subscription?.endpoint;
+      const keys = subscription?.keys;
+      if (typeof endpoint !== 'string' || !endpoint.startsWith('https://')
+        || typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') {
+        return response.status(400).json({ error: 'Data subscription notifikasi tidak valid.' });
+      }
+      try {
+        await supabaseRequest('push_subscriptions', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth })
+        });
+        response.status(201).json({ message: 'Perangkat berhasil didaftarkan untuk notifikasi.' });
+      } catch (error) {
+        console.error('Gagal menyimpan push subscription:', error.message);
+        response.status(503).json({ error: 'Penyimpanan notifikasi belum siap. Periksa konfigurasi Supabase.' });
+      }
+    });
+
+    app.delete('/api/admin/push-subscriptions', async (request, response) => {
+      const endpoint = request.body?.endpoint;
+      if (typeof endpoint !== 'string') return response.status(400).json({ error: 'Endpoint subscription tidak valid.' });
+      const filter = new URLSearchParams({ endpoint: `eq.${endpoint}` });
+      try {
+        await supabaseRequest(`push_subscriptions?${filter}`, { method: 'DELETE' });
+        response.json({ message: 'Subscription perangkat dihapus.' });
+      } catch (error) {
+        console.error('Gagal menghapus push subscription:', error.message);
+        response.status(503).json({ error: 'Subscription tidak dapat dihapus.' });
+      }
+    });
+
     app.get('/api/admin/courses', (_request, response) => {
       const courses = database.prepare(`
         SELECT id, title, category, price, old_price AS oldPrice, description, image
@@ -508,7 +590,7 @@ function removeCourseImages(courseId) {
       });
     });
 
-    app.post('/api/admin/orders/:id/confirm-payment', (request, response) => {
+    app.post('/api/admin/orders/:id/confirm-payment', async (request, response) => {
       const order = database.prepare('SELECT id, status FROM orders WHERE id = ?').get(request.params.id);
       if (!order) return response.status(404).json({ error: 'Pesanan tidak ditemukan.' });
       if (order.status !== 'pending_payment') {
@@ -519,6 +601,11 @@ function removeCourseImages(courseId) {
         WHERE id = ? AND status = 'pending_payment'
       `).run(new Date().toISOString(), order.id);
       if (verified.changes !== 1) return response.status(409).json({ error: 'Muat ulang daftar pesanan dan coba lagi.' });
+      await sendAdminPush({
+        title: 'Pembayaran berhasil',
+        body: `Pesanan ${order.id} sudah dikonfirmasi lunas.`,
+        url: '/admin'
+      });
       response.json({ status: 'paid', message: 'Pembayaran dikonfirmasi. Pembeli dapat membuka resep melalui tautan pesanannya.' });
     });
 
@@ -598,6 +685,11 @@ function removeCourseImages(courseId) {
       } catch (error) {
         console.error('Gagal mengirim notifikasi email admin:', error.message);
       }
+      await sendAdminPush({
+        title: 'Order baru',
+        body: `${name} · Rp ${total.toLocaleString('id-ID')}`,
+        url: '/admin'
+      });
 
       response.status(201).json({
         orderId,
@@ -624,6 +716,15 @@ app.get('/hero-image.png', (_request, response) => {
 
 app.get('/qris.png', (_request, response) => {
   response.sendFile(path.join(__dirname, 'assets', 'payments', 'qris.png'));
+});
+
+app.get('/service-worker.js', (_request, response) => {
+  response.set('Cache-Control', 'no-cache');
+  response.type('application/javascript').sendFile(path.join(__dirname, 'service-worker.js'));
+});
+
+app.get('/manifest.webmanifest', (_request, response) => {
+  response.type('application/manifest+json').sendFile(path.join(__dirname, 'manifest.webmanifest'));
 });
 
 app.get('/recipe-images/dubai-chewy-cookie.jpg', (_request, response) => {
