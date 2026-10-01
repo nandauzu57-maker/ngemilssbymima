@@ -524,6 +524,8 @@ function removeCourseImages(courseId) {
       `).all();
       response.set('Cache-Control', 'no-store').json({ courses: courses.map(course => ({
         ...course,
+        priceMalaysia: Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000,
+        priceMalaysiaMyr: formatMalaysiaPrice(Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000),
         pdfExists: existsSync(path.join(recipeDirectory, `${course.id}.pdf`)),
         imageExists: course.image.startsWith('recipe-images/')
           ? existsSync(path.join(recipeImageDirectory, course.image.slice('recipe-images/'.length)))

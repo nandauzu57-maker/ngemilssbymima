@@ -137,6 +137,7 @@
     let deferredPrompt = null;
     let editingCourseId = null;
     const formatPrice = amount => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+    const formatRinggit = amount => new Intl.NumberFormat('ms-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 2 }).format(amount);
     const savedToken = sessionStorage.getItem('ngemilss-admin-token');
     const savedPin = sessionStorage.getItem('ngemilss-admin-pin');
     if (savedToken) tokenInput.value = savedToken;
@@ -349,7 +350,7 @@
       courses.forEach(course => {
         const row = document.createElement('div');
         row.className = 'course-row';
-        row.innerHTML = `<div><strong>${course.title}</strong><small>${course.id} · ${formatPrice(course.price)} · PDF ${course.pdfExists ? 'siap' : 'belum ada'} · foto ${course.imageExists ? 'siap' : 'belum ada'}</small></div>`;
+        row.innerHTML = `<div><strong>${course.title}</strong><small>${course.id} · Indonesia ${formatPrice(course.price)} · Malaysia ${formatRinggit(course.priceMalaysiaMyr)} · PDF ${course.pdfExists ? 'siap' : 'belum ada'} · foto ${course.imageExists ? 'siap' : 'belum ada'}</small></div>`;
         const actions = document.createElement('div');
         actions.className = 'course-row-actions';
         const edit = document.createElement('button');
