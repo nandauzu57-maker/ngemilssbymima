@@ -21,6 +21,10 @@ Checkout menerima domisili Indonesia dan Malaysia. Harga Indonesia tetap mengiku
 
 Push notification membutuhkan tabel `public.push_subscriptions` di Supabase dan environment variables `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, dan `VAPID_SUBJECT` di server. Jangan pernah menaruh service-role atau private VAPID key di frontend. Buat pasangan VAPID secara lokal dengan `npx web-push generate-vapid-keys`, lalu masukkan hasilnya langsung ke environment variables Vercel. Admin harus membuka situs melalui HTTPS, memasukkan token dan PIN, lalu memilih **Aktifkan notifikasi order** pada perangkat yang ingin menerima push.
 
+Untuk production Vercel, jalankan `supabase-orders.sql` satu kali di Supabase SQL Editor. Data order dan item order kemudian disimpan di Supabase, bukan di SQLite sementara Vercel, sehingga QR dan status pembayaran tetap tersedia setelah function berganti instance. SQLite lokal tetap dipakai saat menjalankan aplikasi di komputer.
+
+Jalankan migration tersebut sebelum deploy versi yang memindahkan order ke Supabase. Tabel memakai Row Level Security tanpa policy publik; akses dilakukan dari server melalui `SUPABASE_SERVICE_ROLE_KEY`.
+
 ## Struktur folder
 
 - `index.html`, `admin.html`, `server.js` - halaman toko, admin, dan backend.

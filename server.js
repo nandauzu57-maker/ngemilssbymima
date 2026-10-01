@@ -39,6 +39,7 @@ database.exec(`
     customer_name TEXT NOT NULL,
     customer_email TEXT NOT NULL,
     total_amount INTEGER NOT NULL CHECK (total_amount >= 0),
+    total_amount_myr REAL CHECK (total_amount_myr IS NULL OR total_amount_myr >= 0),
     payment_method TEXT NOT NULL DEFAULT 'qris' CHECK (payment_method = 'qris'),
     status TEXT NOT NULL DEFAULT 'pending_payment',
     created_at TEXT NOT NULL,
@@ -72,6 +73,9 @@ if (!orderColumns.some(column => column.name === 'delivery_token')) {
 if (!orderColumns.some(column => column.name === 'customer_country')) {
   database.exec("ALTER TABLE orders ADD COLUMN customer_country TEXT NOT NULL DEFAULT 'ID' CHECK (customer_country IN ('ID', 'MY'))");
 }
+if (!orderColumns.some(column => column.name === 'total_amount_myr')) {
+  database.exec('ALTER TABLE orders ADD COLUMN total_amount_myr REAL');
+}
 const missingDeliveryTokens = database.prepare('SELECT id FROM orders WHERE delivery_token IS NULL').all();
 const setDeliveryToken = database.prepare('UPDATE orders SET delivery_token = ? WHERE id = ?');
 for (const order of missingDeliveryTokens) {
@@ -104,6 +108,7 @@ function malaysiaPriceFor(course) {
 }
 const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const useSupabaseOrderStore = Boolean(process.env.VERCEL) || Boolean(supabaseUrl && supabaseServiceKey);
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
 
@@ -128,6 +133,194 @@ async function supabaseRequest(resource, options = {}) {
     throw error;
   }
   return result;
+}
+
+function mapSupabaseOrder(order) {
+  return {
+    id: order.id,
+    status: order.status,
+    total: Number(order.total_amount),
+    totalMyr: order.total_amount_myr === null ? null : Number(order.total_amount_myr),
+    customerCountry: order.customer_country,
+    customerName: order.customer_name,
+    customerEmail: order.customer_email,
+    paymentMethod: order.payment_method,
+    createdAt: order.created_at,
+    delivery_token: order.delivery_token,
+    paymentVerifiedAt: order.payment_verified_at
+  };
+}
+
+async function findOrderByAccessToken(orderId, token) {
+  if (typeof token !== 'string' || !token) return null;
+  if (useSupabaseOrderStore) {
+    const query = new URLSearchParams({
+      select: 'id,status,total_amount,total_amount_myr,customer_country,customer_name,customer_email,payment_method,created_at,delivery_token,payment_verified_at',
+      id: `eq.${orderId}`,
+      delivery_token: `eq.${token}`
+    });
+    const response = await supabaseRequest(`orders?${query}`);
+    const [order] = await response.json();
+    return order ? mapSupabaseOrder(order) : null;
+  }
+  const order = database.prepare(`
+        SELECT id, delivery_token, status, total_amount AS total,
+          total_amount_myr AS totalMyr, customer_country AS customerCountry,
+          payment_verified_at AS paymentVerifiedAt
+    FROM orders WHERE id = ?
+  `).get(orderId);
+  if (!order?.delivery_token) return null;
+  const expected = Buffer.from(order.delivery_token);
+  const supplied = Buffer.from(token);
+  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
+  return order;
+}
+
+async function getOrderItems(orderId) {
+  if (useSupabaseOrderStore) {
+    const query = new URLSearchParams({
+      select: 'course_id,course_title,quantity',
+      order_id: `eq.${orderId}`,
+      order: 'id.asc'
+    });
+    const response = await supabaseRequest(`order_items?${query}`);
+    return (await response.json()).map(item => ({
+      courseId: item.course_id,
+      title: item.course_title,
+      quantity: item.quantity
+    }));
+  }
+  return database.prepare(`
+    SELECT course_id AS courseId, course_title AS title, quantity
+    FROM order_items WHERE order_id = ? ORDER BY id
+  `).all(orderId);
+}
+
+async function orderContainsCourse(orderId, courseId) {
+  if (useSupabaseOrderStore) {
+    const query = new URLSearchParams({ select: 'id', order_id: `eq.${orderId}`, course_id: `eq.${courseId}`, limit: '1' });
+    const response = await supabaseRequest(`order_items?${query}`);
+    return (await response.json()).length > 0;
+  }
+  return Boolean(database.prepare('SELECT 1 FROM order_items WHERE order_id = ? AND course_id = ?').get(orderId, courseId));
+}
+
+async function courseHasOrders(courseId) {
+  if (useSupabaseOrderStore) {
+    const query = new URLSearchParams({ select: 'id', course_id: `eq.${courseId}`, limit: '1' });
+    const response = await supabaseRequest(`order_items?${query}`);
+    return (await response.json()).length > 0;
+  }
+  return Boolean(database.prepare('SELECT 1 FROM order_items WHERE course_id = ? LIMIT 1').get(courseId));
+}
+
+async function saveOrder(order, items) {
+  if (!useSupabaseOrderStore) {
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      database.prepare(`
+        INSERT INTO orders (id, customer_name, customer_email, customer_country, total_amount, total_amount_myr, payment_method, status, created_at, delivery_token)
+        VALUES (?, ?, ?, ?, ?, ?, 'qris', 'pending_payment', ?, ?)
+      `).run(order.id, order.customerName, order.customerEmail, order.customerCountry, order.total, order.totalMyr, order.createdAt, order.deliveryToken);
+      const insertItem = database.prepare(`
+        INSERT INTO order_items (order_id, course_id, course_title, quantity, unit_price)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      for (const item of items) insertItem.run(order.id, item.id, item.title, item.quantity, item.price);
+      database.exec('COMMIT');
+      return;
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  await supabaseRequest('orders', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      id: order.id,
+      customer_name: order.customerName,
+      customer_email: order.customerEmail,
+      customer_country: order.customerCountry,
+      total_amount: order.total,
+      total_amount_myr: order.totalMyr,
+      payment_method: 'qris',
+      status: 'pending_payment',
+      created_at: order.createdAt,
+      delivery_token: order.deliveryToken
+    })
+  });
+  try {
+    await supabaseRequest('order_items', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(items.map(item => ({
+        order_id: order.id,
+        course_id: item.id,
+        course_title: item.title,
+        quantity: item.quantity,
+        unit_price: item.price
+      })))
+    });
+  } catch (error) {
+    const filter = new URLSearchParams({ id: `eq.${order.id}` });
+    await supabaseRequest(`orders?${filter}`, { method: 'DELETE' }).catch(() => {});
+    throw error;
+  }
+}
+
+async function listPendingOrders() {
+  if (!useSupabaseOrderStore) {
+    const orders = database.prepare(`
+      SELECT id, customer_name AS customerName, customer_email AS customerEmail,
+             customer_country AS customerCountry, total_amount AS total,
+             payment_method AS paymentMethod, status, created_at AS createdAt
+      FROM orders WHERE status = 'pending_payment' ORDER BY created_at DESC
+    `).all();
+    const getItems = database.prepare(`
+      SELECT course_id AS courseId, course_title AS title, quantity
+      FROM order_items WHERE order_id = ? ORDER BY id
+    `);
+    return orders.map(order => ({ ...order, items: getItems.all(order.id) }));
+  }
+
+  const orderQuery = new URLSearchParams({
+    select: 'id,customer_name,customer_email,customer_country,total_amount,payment_method,status,created_at',
+    status: 'eq.pending_payment',
+    order: 'created_at.desc'
+  });
+  const orderResponse = await supabaseRequest(`orders?${orderQuery}`);
+  const orders = (await orderResponse.json()).map(mapSupabaseOrder);
+  if (!orders.length) return [];
+  const itemQuery = new URLSearchParams({
+    select: 'order_id,course_id,course_title,quantity',
+    order_id: `in.(${orders.map(order => order.id).join(',')})`,
+    order: 'id.asc'
+  });
+  const itemResponse = await supabaseRequest(`order_items?${itemQuery}`);
+  const itemsByOrder = new Map(orders.map(order => [order.id, []]));
+  for (const item of await itemResponse.json()) {
+    itemsByOrder.get(item.order_id)?.push({ courseId: item.course_id, title: item.course_title, quantity: item.quantity });
+  }
+  return orders.map(order => ({ ...order, items: itemsByOrder.get(order.id) || [] }));
+}
+
+async function markOrderPaid(orderId) {
+  if (!useSupabaseOrderStore) {
+    const verified = database.prepare(`
+      UPDATE orders SET status = 'paid', payment_verified_at = ?
+      WHERE id = ? AND status = 'pending_payment'
+    `).run(new Date().toISOString(), orderId);
+    return verified.changes === 1;
+  }
+  const query = new URLSearchParams({ id: `eq.${orderId}`, status: 'eq.pending_payment' });
+  const response = await supabaseRequest(`orders?${query}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({ status: 'paid', payment_verified_at: new Date().toISOString() })
+  });
+  return (await response.json()).length === 1;
 }
 
 async function sendAdminPush(notification) {
@@ -378,22 +571,8 @@ app.get('/api/courses', (_request, response) => {
   })));
 });
 
-function findOrderByAccessToken(orderId, token) {
-  if (typeof token !== 'string' || !token) return null;
-  const order = database.prepare(`
-        SELECT id, delivery_token, status, total_amount AS total, customer_country AS customerCountry,
-          payment_verified_at AS paymentVerifiedAt
-    FROM orders WHERE id = ?
-  `).get(orderId);
-  if (!order?.delivery_token) return null;
-  const expected = Buffer.from(order.delivery_token);
-  const supplied = Buffer.from(token);
-  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
-  return order;
-}
-
-app.get('/watch/:orderId/:videoId', (request, response) => {
-  const order = findOrderByAccessToken(request.params.orderId, request.query.token);
+app.get('/watch/:orderId/:videoId', async (request, response) => {
+  const order = await findOrderByAccessToken(request.params.orderId, request.query.token);
   if (!order?.paymentVerifiedAt) {
     return response.status(404).send('Tautan video tidak valid atau pembayaran belum dikonfirmasi.');
   }
@@ -401,28 +580,24 @@ app.get('/watch/:orderId/:videoId', (request, response) => {
   const courseId = Object.keys(videoLessons).find(id => videoLessons[id].some(video => video.id === request.params.videoId));
   const lesson = videoLessons[courseId]?.find(video => video.id === request.params.videoId);
   if (!lesson) return response.status(404).send('Video tidak ditemukan.');
-  const belongsToOrder = database.prepare('SELECT 1 FROM order_items WHERE order_id = ? AND course_id = ?')
-    .get(request.params.orderId, courseId);
+  const belongsToOrder = await orderContainsCourse(request.params.orderId, courseId);
   if (!belongsToOrder) return response.status(404).send('Video tidak termasuk dalam pesanan ini.');
 
   response.set('Cache-Control', 'private, no-store').set('Referrer-Policy', 'no-referrer');
   response.sendFile(path.join(__dirname, lesson.filename));
 });
 
-app.get('/api/orders/:id/access', (request, response) => {
-  const order = findOrderByAccessToken(request.params.id, request.query.token);
+app.get('/api/orders/:id/access', async (request, response) => {
+  const order = await findOrderByAccessToken(request.params.id, request.query.token);
   if (!order) return response.status(404).json({ error: 'Tautan pesanan tidak valid.' });
-  const items = database.prepare(`
-    SELECT course_id AS courseId, course_title AS title, quantity
-    FROM order_items WHERE order_id = ? ORDER BY id
-  `).all(order.id);
+  const items = await getOrderItems(order.id);
   const paid = Boolean(order.paymentVerifiedAt);
   response.set('Cache-Control', 'private, no-store').set('Referrer-Policy', 'no-referrer').json({
     orderId: order.id,
     status: order.status,
     total: order.total,
     customerCountry: order.customerCountry,
-    totalMyr: order.customerCountry === 'MY' ? formatMalaysiaPrice(order.total) : null,
+    totalMyr: order.customerCountry === 'MY' ? order.totalMyr ?? formatMalaysiaPrice(order.total) : null,
     paymentVerified: paid,
     items: items.map(item => ({
       ...item,
@@ -435,11 +610,10 @@ app.get('/api/orders/:id/access', (request, response) => {
   });
 });
 
-app.get('/api/orders/:id/recipes/:courseId', (request, response) => {
-  const order = findOrderByAccessToken(request.params.id, request.query.token);
+app.get('/api/orders/:id/recipes/:courseId', async (request, response) => {
+  const order = await findOrderByAccessToken(request.params.id, request.query.token);
   if (!order?.paymentVerifiedAt) return response.status(404).json({ error: 'Resep belum tersedia sebelum pembayaran dikonfirmasi.' });
-  const item = database.prepare('SELECT 1 FROM order_items WHERE order_id = ? AND course_id = ?')
-    .get(order.id, request.params.courseId);
+  const item = await orderContainsCourse(order.id, request.params.courseId);
   if (!item) return response.status(404).json({ error: 'Resep tidak termasuk dalam pesanan ini.' });
   const pdfPath = path.join(recipeDirectory, `${request.params.courseId}.pdf`);
   if (!existsSync(pdfPath)) return response.status(404).json({ error: 'File PDF resep belum tersedia.' });
@@ -616,10 +790,10 @@ function removeCourseImages(courseId) {
       }
     });
 
-    app.delete('/api/admin/courses/:id', (request, response) => {
+    app.delete('/api/admin/courses/:id', async (request, response) => {
       const course = database.prepare('SELECT id FROM courses WHERE id = ?').get(request.params.id);
       if (!course) return response.status(404).json({ error: 'Resep tidak ditemukan.' });
-      const used = database.prepare('SELECT 1 FROM order_items WHERE course_id = ? LIMIT 1').get(course.id);
+      const used = await courseHasOrders(course.id);
       if (used) return response.status(409).json({ error: 'Resep sudah pernah dipesan dan tidak boleh dihapus.' });
       database.prepare('DELETE FROM courses WHERE id = ?').run(course.id);
       removeIfExists(path.join(recipeDirectory, `${course.id}.pdf`));
@@ -627,40 +801,41 @@ function removeCourseImages(courseId) {
       response.json({ message: 'Resep berhasil dihapus.' });
     });
 
-    app.get('/api/admin/orders', (_request, response) => {
-      const pendingOrders = database.prepare(`
-        SELECT id, customer_name AS customerName, customer_email AS customerEmail,
-               customer_country AS customerCountry, total_amount AS total,
-               payment_method AS paymentMethod, status, created_at AS createdAt
-        FROM orders WHERE status = 'pending_payment'
-        ORDER BY created_at DESC
-      `).all();
-      const getItems = database.prepare(`
-        SELECT course_id AS courseId, course_title AS title, quantity
-        FROM order_items WHERE order_id = ? ORDER BY id
-      `);
-      response.set('Cache-Control', 'no-store').json({
-        orders: pendingOrders.map(order => ({ ...order, items: getItems.all(order.id) }))
-      });
+    app.get('/api/admin/orders', async (_request, response) => {
+      try {
+        const orders = await listPendingOrders();
+        response.set('Cache-Control', 'no-store').json({ orders });
+      } catch (error) {
+        console.error('Gagal memuat order admin:', error.message);
+        response.status(503).json({ error: 'Daftar pesanan belum bisa dimuat dari penyimpanan persisten.' });
+      }
     });
 
     app.post('/api/admin/orders/:id/confirm-payment', async (request, response) => {
-      const order = database.prepare('SELECT id, status FROM orders WHERE id = ?').get(request.params.id);
-      if (!order) return response.status(404).json({ error: 'Pesanan tidak ditemukan.' });
-      if (order.status !== 'pending_payment') {
-        return response.status(409).json({ error: 'Pesanan ini bukan lagi menunggu pembayaran.' });
+      try {
+        let order;
+        if (useSupabaseOrderStore) {
+          const query = new URLSearchParams({ select: 'id,status', id: `eq.${request.params.id}`, limit: '1' });
+          const result = await supabaseRequest(`orders?${query}`);
+          [order] = await result.json();
+        } else {
+          order = database.prepare('SELECT id, status FROM orders WHERE id = ?').get(request.params.id);
+        }
+        if (!order) return response.status(404).json({ error: 'Pesanan tidak ditemukan.' });
+        if (order.status !== 'pending_payment') {
+          return response.status(409).json({ error: 'Pesanan ini bukan lagi menunggu pembayaran.' });
+        }
+        if (!await markOrderPaid(order.id)) return response.status(409).json({ error: 'Muat ulang daftar pesanan dan coba lagi.' });
+        await sendAdminPush({
+          title: 'Pembayaran berhasil',
+          body: `Pesanan ${order.id} sudah dikonfirmasi lunas.`,
+          url: '/admin'
+        });
+        response.json({ status: 'paid', message: 'Pembayaran dikonfirmasi. Pembeli dapat membuka resep melalui tautan pesanannya.' });
+      } catch (error) {
+        console.error('Gagal mengonfirmasi pembayaran:', error.message);
+        response.status(503).json({ error: 'Pembayaran belum dapat diperbarui di penyimpanan pesanan.' });
       }
-      const verified = database.prepare(`
-        UPDATE orders SET status = 'paid', payment_verified_at = ?
-        WHERE id = ? AND status = 'pending_payment'
-      `).run(new Date().toISOString(), order.id);
-      if (verified.changes !== 1) return response.status(409).json({ error: 'Muat ulang daftar pesanan dan coba lagi.' });
-      await sendAdminPush({
-        title: 'Pembayaran berhasil',
-        body: `Pesanan ${order.id} sudah dikonfirmasi lunas.`,
-        url: '/admin'
-      });
-      response.json({ status: 'paid', message: 'Pembayaran dikonfirmasi. Pembeli dapat membuka resep melalui tautan pesanannya.' });
     });
 
     app.post('/api/orders', async (request, response) => {
@@ -701,29 +876,32 @@ function removeCourseImages(courseId) {
       for (const [courseId, quantity] of quantities) {
         const course = findCourse.get(courseId);
         if (!course) return response.status(400).json({ error: 'Resep tidak tersedia untuk dibeli.' });
-        const unitPrice = country === 'MY' ? malaysiaPriceFor(course).priceMalaysia : course.price;
-        orderItems.push({ ...course, price: unitPrice, quantity });
+        const malaysiaPrice = malaysiaPriceFor(course);
+        const unitPrice = country === 'MY' ? malaysiaPrice.priceMalaysia : course.price;
+        orderItems.push({ ...course, price: unitPrice, priceMalaysiaMyr: malaysiaPrice.priceMalaysiaMyr, quantity });
       }
 
       const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const totalMyr = country === 'MY'
+        ? orderItems.reduce((sum, item) => sum + item.priceMalaysiaMyr * item.quantity, 0)
+        : null;
       const orderId = randomUUID();
       const deliveryToken = randomBytes(32).toString('base64url');
       const createdAt = new Date().toISOString();
-      database.exec('BEGIN IMMEDIATE');
       try {
-        database.prepare(`
-          INSERT INTO orders (id, customer_name, customer_email, customer_country, total_amount, payment_method, status, created_at, delivery_token)
-          VALUES (?, ?, ?, ?, ?, 'qris', 'pending_payment', ?, ?)
-        `).run(orderId, name, email, country, total, createdAt, deliveryToken);
-        const insertItem = database.prepare(`
-          INSERT INTO order_items (order_id, course_id, course_title, quantity, unit_price)
-          VALUES (?, ?, ?, ?, ?)
-        `);
-        for (const item of orderItems) insertItem.run(orderId, item.id, item.title, item.quantity, item.price);
-        database.exec('COMMIT');
+        await saveOrder({
+          id: orderId,
+          customerName: name,
+          customerEmail: email,
+          customerCountry: country,
+          total,
+          totalMyr,
+          createdAt,
+          deliveryToken
+        }, orderItems);
       } catch (error) {
-        database.exec('ROLLBACK');
-        throw error;
+        console.error('Gagal menyimpan order:', error.message);
+        return response.status(503).json({ error: 'Order belum bisa disimpan. Coba lagi sebentar.' });
       }
       const adminUrl = `${appUrl}/admin`;
       try {
