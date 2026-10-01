@@ -486,7 +486,7 @@ function removeCourseImages(courseId) {
         return response.status(400).json({ error: 'Data subscription notifikasi tidak valid.' });
       }
       try {
-        await supabaseRequest('push_subscriptions', {
+        await supabaseRequest('push_subscriptions?on_conflict=endpoint', {
           method: 'POST',
           headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify({ endpoint, p256dh: keys.p256dh, auth: keys.auth })
