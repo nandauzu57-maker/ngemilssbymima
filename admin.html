@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff8f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="MIMA Admin">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <title>Admin Pesanan — ngemilssby.mima</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #39372f; --muted: #817b70; --paper: #fff8f1; --white: #fffefd; --green: #52755c; --line: #efe5dc; --coral: #e77d72; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background-color: var(--paper); background-image: radial-gradient(#eddfd2 0.65px, transparent 0.65px); background-size: 13px 13px; font-family: 'Nunito', sans-serif; }
+    header { position: sticky; top: 0; z-index: 3; padding: 12px 24px; background: rgb(255 254 253 / 94%); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); }
+    .brand { max-width: 960px; margin: auto; display: flex; align-items: center; gap: 14px; font-size: 13px; font-weight: 800; }
+    .brand img { width: 54px; height: 54px; object-fit: contain; }
+    main { width: min(960px, calc(100% - 32px)); margin: 34px auto 70px; }
+    h1, h2, h3 { font-family: 'Fredoka', 'Nunito', sans-serif; }
+    h1 { margin: 0; font-size: 36px; line-height: 1.1; }
+    .intro { margin: 7px 0 24px; color: var(--muted); font-size: 13px; }
+    .access { padding: 17px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: 0 4px 15px rgb(57 55 47 / 4%); }
+    .access form { display: flex; gap: 9px; flex-wrap: wrap; }
+    .access-field { flex: 1 1 200px; min-width: 0; }
+    input { min-width: 0; min-height: 43px; flex: 1; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; outline-color: var(--green); font: inherit; font-size: 12px; }
+    button { min-height: 42px; padding: 0 15px; border: 0; border-radius: 5px; background: var(--green); color: white; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+    button.secondary { background: #edf3e9; color: #45634b; }
+    button:hover:not(:disabled) { background: #45694f; transform: translateY(-1px); }
+    button.secondary:hover:not(:disabled) { background: #dfeada; color: #354f3a; }
+    button:disabled { opacity: .55; cursor: wait; }
+    :focus-visible { outline: 3px solid #c96e64; outline-offset: 3px; }
+    .notice { min-height: 22px; margin: 13px 0; color: var(--muted); font-size: 12px; }
+    .notice.error { color: #a94442; }
+    .notice.success { color: #45634b; }
+    .install-strip { margin: 12px 0 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f8f4ef; color: var(--ink); font-size: 12px; }
+    .install-strip strong { display: block; margin-bottom: 6px; font-size: 12px; }
+    .install-strip button { margin-top: 8px; }
+    .live-banner { display: none; margin: 12px 0 18px; padding: 12px 14px; border: 1px solid #f2d9b7; border-radius: 8px; background: #fff8de; color: #7a5b16; font-size: 12px; font-weight: 700; }
+    .live-banner.visible { display: block; }
+    .course-manager { margin: 28px 0; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: 0 4px 15px rgb(57 55 47 / 4%); }
+    .course-manager h2 { margin: 0 0 5px; font-size: 22px; }
+    .course-manager-intro { margin: 0 0 16px; color: var(--muted); font-size: 11px; }
+    .course-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .course-form label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .course-form input, .course-form textarea { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; font: inherit; font-size: 12px; }
+    .course-form textarea { min-height: 72px; resize: vertical; }
+    .course-form .wide { grid-column: 1 / -1; }
+    .course-form-actions { display: flex; gap: 9px; grid-column: 1 / -1; }
+    .course-list { display: grid; gap: 8px; margin-top: 18px; }
+    .course-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .course-row strong { display: block; font-size: 12px; }
+    .course-row small { color: var(--muted); font-size: 10px; }
+    .course-row-actions { display: flex; gap: 7px; }
+    .course-row-actions button { min-height: 34px; padding: 0 10px; font-size: 10px; }
+    .course-row-actions .danger { background: #f8e8de; color: #9c5a4b; }
+    .order-list { display: grid; gap: 12px; }
+    .order { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: 0 3px 12px rgb(57 55 47 / 4%); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 20px; }
+    .order h2 { margin: 0 0 3px; font-size: 20px; }
+    .order p { margin: 4px 0; color: var(--muted); font-size: 11px; }
+    .order strong { color: var(--ink); }
+    .order-meta { min-width: 180px; text-align: right; }
+    .order-status { display: inline-block; margin-bottom: 6px; padding: 4px 8px; border-radius: 30px; background: #fff0ce; color: #86662b; font-size: 9px; font-weight: 800; }
+    .order-status.paid_pending_email, .order-status.paid_pending_delivery { background: #f8e8de; color: #9c5a4b; }
+    .order-status.paid { background: #e4efe1; color: #45634b; }
+    .order-actions { margin-top: 11px; }
+    .empty { padding: 25px 0; color: var(--muted); font-size: 12px; }
+    @media (max-width: 560px) {
+      header { padding: 12px 16px; }
+      main { margin-top: 25px; }
+      h1 { font-size: 31px; }
+      .access form { align-items: stretch; flex-direction: column; }
+      .order { grid-template-columns: 1fr; gap: 10px; }
+      .order-meta { min-width: 0; text-align: left; }
+      .course-form { grid-template-columns: 1fr; }
+      .course-form .wide, .course-form-actions { grid-column: auto; }
+      .course-row { align-items: flex-start; flex-direction: column; }
+      .course-row-actions { width: 100%; }
+      .course-row-actions button { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header><a class="brand" href="/"><img src="/brand-logo.png?v=logo-2" alt=""><span>ngemilssby.mima<br>Admin pesanan</span></a></header>
+  <main>
+    <h1>Pesanan QRIS</h1>
+    <p class="intro">Cocokkan pembayaran QRIS dengan mutasi, lalu konfirmasi untuk membuka portal resep pembeli.</p>
+    <section class="access" aria-label="Akses admin">
+      <form id="access-form">
+        <div class="access-field"><input id="admin-token" type="password" autocomplete="current-password" placeholder="Token admin" required></div>
+        <div class="access-field"><input id="admin-pin" type="password" autocomplete="one-time-code" placeholder="PIN admin" required></div>
+        <button type="submit">Buka pesanan</button>
+        <button type="button" class="secondary" id="logout">Keluar</button>
+      </form>
+    </section>
+    <section class="course-manager" aria-labelledby="course-manager-title">
+      <h2 id="course-manager-title">Kelola resep</h2>
+      <p class="course-manager-intro">Tambah atau ganti resep tanpa mengaktifkan maintenance. PDF maksimal 12 MB; foto memakai JPG, PNG, atau WebP.</p>
+      <form class="course-form" id="course-form">
+        <label>ID resep<input name="id" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="contoh: brownies-kurma"></label>
+        <label>Judul resep<input name="title" required maxlength="120" placeholder="Nama resep"></label>
+        <label>Kategori<input name="category" required maxlength="60" placeholder="Dessert"></label>
+        <label>Harga jual<input name="price" type="number" min="0" required placeholder="15000"></label>
+        <label>Harga lama<input name="oldPrice" type="number" min="0" required placeholder="20000"></label>
+        <label>PDF resep<input name="pdf" type="file" accept="application/pdf"></label>
+        <label>Foto resep<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+        <label class="wide">Deskripsi<textarea name="description" maxlength="500" placeholder="Deskripsi singkat resep"></textarea></label>
+        <div class="course-form-actions"><button type="submit" id="course-submit">Tambah resep</button><button type="button" class="secondary" id="course-cancel" hidden>Batal edit</button></div>
+      </form>
+      <div class="course-list" id="course-list"></div>
+    </section>
+    <div class="install-strip" id="install-strip">
+      <strong>Untuk iPhone:</strong>
+      Buka halaman ini di Safari, lalu tap tombol Share dan pilih “Add to Home Screen”. Setelah itu, admin bisa dibuka seperti app.
+      <button type="button" id="install-button" class="secondary" hidden>Install app</button>
+      <button type="button" id="notification-button" class="secondary">Aktifkan notifikasi order</button>
+    </div>
+    <div class="live-banner" id="live-banner" role="status" aria-live="polite"></div>
+    <p class="notice" id="notice" role="status" aria-live="polite"></p>
+    <section class="order-list" id="order-list" aria-live="polite"></section>
+  </main>
+  <script>
+    const tokenInput = document.getElementById('admin-token');
+    const liveBanner = document.getElementById('live-banner');
+    const installButton = document.getElementById('install-button');
+    const notificationButton = document.getElementById('notification-button');
+    const pinInput = document.getElementById('admin-pin');
+    const notice = document.getElementById('notice');
+    const orderList = document.getElementById('order-list');
+    const courseForm = document.getElementById('course-form');
+    const courseList = document.getElementById('course-list');
+    const courseSubmit = document.getElementById('course-submit');
+    const courseCancel = document.getElementById('course-cancel');
+    let deferredPrompt = null;
+    let editingCourseId = null;
+    const formatPrice = amount => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+    const savedToken = sessionStorage.getItem('ngemilss-admin-token');
+    const savedPin = sessionStorage.getItem('ngemilss-admin-pin');
+    if (savedToken) tokenInput.value = savedToken;
+    if (savedPin) pinInput.value = savedPin;
+
+    let lastSeenOrders = new Set();
+    let livePollingTimer = null;
+
+    function setNotice(message, type = '') {
+      notice.textContent = message;
+      notice.className = `notice ${type}`.trim();
+    }
+
+    function showLiveBanner(message) {
+      liveBanner.textContent = message;
+      liveBanner.classList.add('visible');
+      document.title = 'Order baru — ngemilssby.mima Admin';
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Order baru', {
+          body: message,
+          icon: '/brand-logo.png'
+        });
+      }
+
+      setTimeout(() => {
+        liveBanner.classList.remove('visible');
+        document.title = 'Admin Pesanan — ngemilssby.mima';
+      }, 6500);
+    }
+
+    async function enableNotifications() {
+      if (!('Notification' in window)) {
+        setNotice('Browser ini tidak mendukung notifikasi.', 'error');
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        notificationButton.textContent = 'Notifikasi aktif';
+        notificationButton.disabled = true;
+        setNotice('Notifikasi order sudah aktif di browser ini.', 'success');
+      } else {
+        setNotice('Izin notifikasi belum diberikan. Aktifkan dari pengaturan browser.', 'error');
+      }
+    }
+
+    function setupInstallPrompt() {
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      if (!isSafari) {
+        window.addEventListener('beforeinstallprompt', event => {
+          event.preventDefault();
+          deferredPrompt = event;
+          installButton.hidden = false;
+        });
+      }
+
+      installButton.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+          setNotice('Untuk iPhone, buka Safari lalu pilih Share > Add to Home Screen.', 'success');
+          return;
+        }
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        installButton.hidden = true;
+      });
+      notificationButton.addEventListener('click', enableNotifications);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        notificationButton.textContent = 'Notifikasi aktif';
+        notificationButton.disabled = true;
+      }
+    }
+
+    function detectNewOrders(orders) {
+      if (!orders.length) {
+        lastSeenOrders.clear();
+        return;
+      }
+      const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      const currentOrderIds = new Set(orders.map(order => order.id));
+      const previousOrderIds = lastSeenOrders;
+      const newOrders = orders.filter(order => !previousOrderIds.has(order.id));
+
+      if (previousOrderIds.size && newOrders.length) {
+        const first = newOrders[0];
+        showLiveBanner(`Order baru dari ${first.customerName} · ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(first.total)}`);
+      }
+
+      lastSeenOrders = currentOrderIds;
+      if (!previousOrderIds.size && latest) {
+        setNotice(`Tersedia ${orders.length} pesanan menunggu verifikasi.`, 'success');
+      }
+    }
+
+    async function adminRequest(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${tokenInput.value.trim()}`,
+          'X-Admin-Pin': pinInput.value.trim(),
+          ...(options.headers || {})
+        }
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Permintaan gagal.');
+      return body;
+    }
+    function makeOrder(order) {
+      const article = document.createElement('article');
+      article.className = 'order';
+      const details = document.createElement('div');
+      const heading = document.createElement('h2');
+      heading.textContent = `${order.customerName} · ${order.customerCountry === 'MY' ? 'Malaysia' : 'Indonesia'}`;
+      const contact = document.createElement('p');
+      contact.textContent = order.customerEmail || 'Tanpa email · akses lewat tautan pesanan';
+      const items = document.createElement('p');
+      items.textContent = order.items.map(item => `${item.title} × ${item.quantity}`).join(', ');
+      const created = document.createElement('p');
+      created.textContent = `Dibuat ${new Date(order.createdAt).toLocaleString('id-ID')} · ID ${order.id}`;
+      details.append(heading, contact, items, created);
+
+      const meta = document.createElement('div');
+      meta.className = 'order-meta';
+      const status = document.createElement('span');
+      status.className = 'order-status';
+      status.textContent = 'Menunggu verifikasi QRIS';
+      const amount = document.createElement('p');
+      amount.innerHTML = `<strong>${formatPrice(order.total)}</strong> · QRIS`;
+      const action = document.createElement('button');
+      action.textContent = 'Konfirmasi lunas & buka resep';
+      action.addEventListener('click', async () => {
+        if (!window.confirm(`Pastikan pembayaran QRIS ${formatPrice(order.total)} sudah masuk sebelum melanjutkan.`)) return;
+        action.disabled = true;
+        try {
+          const result = await adminRequest(`/api/admin/orders/${encodeURIComponent(order.id)}/confirm-payment`, { method: 'POST' });
+          setNotice(result.message, 'success');
+          await loadOrders();
+        } catch (error) {
+          setNotice(error.message, 'error');
+          action.disabled = false;
+        }
+      });
+      const actions = document.createElement('div');
+      actions.className = 'order-actions';
+      actions.append(action);
+      meta.append(status, amount, actions);
+      article.append(details, meta);
+      return article;
+    }
+    async function loadOrders() {
+      if (!tokenInput.value.trim() || !pinInput.value.trim()) {
+        setNotice('Masukkan token admin dan PIN admin untuk melihat pesanan.');
+        return;
+      }
+      try {
+        const result = await adminRequest('/api/admin/orders');
+        orderList.replaceChildren();
+        if (result.orders.length) result.orders.forEach(order => orderList.append(makeOrder(order)));
+        else {
+          const empty = document.createElement('p');
+          empty.className = 'empty';
+          empty.textContent = 'Belum ada pesanan yang perlu diproses.';
+          orderList.append(empty);
+        }
+        sessionStorage.setItem('ngemilss-admin-token', tokenInput.value.trim());
+        sessionStorage.setItem('ngemilss-admin-pin', pinInput.value.trim());
+        detectNewOrders(result.orders);
+        setNotice(`${result.orders.length} pesanan menunggu verifikasi QRIS.`);
+      } catch (error) {
+        orderList.replaceChildren();
+        setNotice(error.message, 'error');
+      }
+    }
+    function resetCourseForm() {
+      editingCourseId = null;
+      courseForm.reset();
+      courseForm.elements.id.disabled = false;
+      courseForm.elements.pdf.required = true;
+      courseForm.elements.image.required = true;
+      courseSubmit.textContent = 'Tambah resep';
+      courseCancel.hidden = true;
+    }
+    function renderCourseList(courses) {
+      courseList.replaceChildren();
+      if (!courses.length) {
+        courseList.innerHTML = '<p class="empty">Belum ada resep.</p>';
+        return;
+      }
+      courses.forEach(course => {
+        const row = document.createElement('div');
+        row.className = 'course-row';
+        row.innerHTML = `<div><strong>${course.title}</strong><small>${course.id} · ${formatPrice(course.price)} · PDF ${course.pdfExists ? 'siap' : 'belum ada'} · foto ${course.imageExists ? 'siap' : 'belum ada'}</small></div>`;
+        const actions = document.createElement('div');
+        actions.className = 'course-row-actions';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'secondary';
+        edit.textContent = 'Edit';
+        edit.addEventListener('click', () => {
+          editingCourseId = course.id;
+          for (const field of ['id', 'title', 'category', 'price', 'oldPrice', 'description']) courseForm.elements[field].value = course[field] || '';
+          courseForm.elements.id.disabled = true;
+          courseForm.elements.pdf.required = false;
+          courseForm.elements.image.required = false;
+          courseSubmit.textContent = 'Simpan perubahan';
+          courseCancel.hidden = false;
+          courseForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'danger';
+        remove.textContent = 'Hapus';
+        remove.addEventListener('click', async () => {
+          if (!window.confirm(`Hapus resep ${course.title}?`)) return;
+          try {
+            const result = await adminRequest(`/api/admin/courses/${encodeURIComponent(course.id)}`, { method: 'DELETE' });
+            setNotice(result.message, 'success');
+            await loadCourses();
+          } catch (error) { setNotice(error.message, 'error'); }
+        });
+        actions.append(edit, remove);
+        row.append(actions);
+        courseList.append(row);
+      });
+    }
+    async function loadCourses() {
+      if (!tokenInput.value.trim() || !pinInput.value.trim()) return;
+      try {
+        const result = await adminRequest('/api/admin/courses');
+        renderCourseList(result.courses);
+      } catch (error) { setNotice(error.message, 'error'); }
+    }
+    courseForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      courseSubmit.disabled = true;
+      try {
+        const formData = new FormData(courseForm);
+        const endpoint = editingCourseId ? `/api/admin/courses/${encodeURIComponent(editingCourseId)}` : '/api/admin/courses';
+        const result = await adminRequest(endpoint, { method: editingCourseId ? 'PUT' : 'POST', body: formData });
+        setNotice(result.message, 'success');
+        resetCourseForm();
+        await loadCourses();
+      } catch (error) { setNotice(error.message, 'error'); }
+      finally { courseSubmit.disabled = false; }
+    });
+    courseCancel.addEventListener('click', resetCourseForm);
+    function startLivePolling() {
+      if (livePollingTimer) clearInterval(livePollingTimer);
+      livePollingTimer = setInterval(() => {
+        if (tokenInput.value.trim() && pinInput.value.trim()) {
+          loadOrders();
+        }
+      }, 10000);
+    }
+
+    document.getElementById('access-form').addEventListener('submit', event => {
+      event.preventDefault();
+      loadOrders();
+      loadCourses();
+      startLivePolling();
+    });
+    document.getElementById('logout').addEventListener('click', () => {
+      sessionStorage.removeItem('ngemilss-admin-token');
+      sessionStorage.removeItem('ngemilss-admin-pin');
+      tokenInput.value = '';
+      pinInput.value = '';
+      orderList.replaceChildren();
+      if (livePollingTimer) clearInterval(livePollingTimer);
+      setNotice('Token dan PIN admin dihapus dari sesi ini.');
+    });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    }
+
+    setupInstallPrompt();
+
+    if (savedToken) { loadOrders(); loadCourses(); startLivePolling(); }
+  </script>
+</body>
+</html>

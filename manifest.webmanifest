@@ -1,0 +1,17 @@
+{
+  "name": "ngemilssby.mima Admin",
+  "short_name": "MIMA Admin",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#fff8f1",
+  "theme_color": "#fff8f1",
+  "description": "Admin pesanan ngemilssby.mima",
+  "icons": [
+    {
+      "src": "/brand-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

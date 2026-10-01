@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#fff8f1">
+  <title>Pesanan resep - ngemilssby.mima</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #39372f; --muted: #817b70; --paper: #fff8f1; --white: #fffefd; --green: #52755c; --green-light: #e4efe1; --tomato: #e77d72; --line: #efe5dc; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; color: var(--ink); background: var(--paper); background-image: radial-gradient(#eddfd2 .65px, transparent .65px); background-size: 13px 13px; font-family: 'Nunito', sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; }
+    :focus-visible { outline: 3px solid #c96e64; outline-offset: 3px; }
+    header { position: sticky; top: 0; z-index: 2; padding: 10px 24px; border-bottom: 1px solid var(--line); background: rgb(255 254 253 / 95%); backdrop-filter: blur(12px); }
+    .brand { width: min(1040px, 100%); min-height: 58px; margin: auto; display: flex; align-items: center; gap: 12px; color: var(--ink); font-weight: 800; }
+    .brand img { width: 54px; height: 54px; object-fit: contain; }
+    main { width: min(880px, calc(100% - 36px)); margin: 34px auto 64px; }
+    .back { display: inline-flex; align-items: center; min-height: 40px; margin-bottom: 22px; color: #456b4c; font-size: 12px; font-weight: 800; }
+    .eyebrow { color: #b45f5d; font-size: 11px; font-weight: 800; }
+    h1, h2, h3 { font-family: 'Fredoka', 'Nunito', sans-serif; }
+    h1 { margin: 10px 0; font-size: clamp(32px, 6vw, 48px); line-height: 1.05; }
+    h2 { margin: 0 0 8px; font-size: 26px; }
+    h3 { margin: 0; font-size: 19px; }
+    p { color: var(--muted); line-height: 1.65; }
+    .intro { max-width: 640px; margin-bottom: 20px; font-size: 14px; }
+    .order-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 15px 0 20px; border-bottom: 1px solid var(--line); font-size: 11px; }
+    .order-number { color: var(--muted); overflow-wrap: anywhere; }
+    .state { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 10px; border-radius: 999px; background: #fff0ce; color: #86662b; font-weight: 800; }
+    .state.paid { background: var(--green-light); color: #45634b; }
+    .button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 0 15px; border: 0; border-radius: 6px; background: var(--green); color: white; font-size: 11px; font-weight: 800; cursor: pointer; }
+    .button:hover { background: #45694f; }
+    .button:disabled { opacity: .55; cursor: wait; }
+    .button.secondary { border: 1px solid var(--line); background: var(--white); color: var(--ink); }
+    .status-message { min-height: 24px; margin: 12px 0; font-size: 12px; }
+    .status-message.error { color: #a94442; }
+    .buyer-disclaimer { margin: 14px 0 0; padding: 12px 14px; border-left: 3px solid #e7a44e; border-radius: 4px; background: #fff8e8; color: #77633d; font-size: 11px; line-height: 1.65; }
+    .pending { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 26px; align-items: start; padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .payment-copy { padding: 4px 0; }
+    .payment-copy p { max-width: 480px; margin: 0; font-size: 12px; }
+    .qris { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: 0 6px 20px rgb(57 55 47 / 5%); text-align: center; }
+    .qris img { width: min(100%, 240px); aspect-ratio: 1; object-fit: contain; display: block; margin: 0 auto 12px; }
+    .qris-total { margin: 0; color: var(--muted); font-size: 11px; }
+    .qris-total strong { display: block; margin-top: 3px; color: var(--ink); font: 600 27px 'Fredoka', sans-serif; }
+    .qris-number { margin: 12px 0 0; font-size: 10px; overflow-wrap: anywhere; }
+    .paid { padding: 24px 0; }
+    .thank-you { display: flex; align-items: center; gap: 13px; margin: 4px 0 22px; padding: 12px 14px; border: 1px solid #d5e3d0; border-radius: 8px; background: #f3f8f0; color: #45634b; animation: thank-you-in .65s cubic-bezier(.2, .8, .2, 1) both; }
+    .thank-you img { width: 52px; height: 52px; object-fit: contain; animation: thank-you-logo 2.8s ease-in-out .4s infinite; }
+    .thank-you-mark { width: 25px; height: 25px; display: grid; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--green); color: white; font-size: 15px; font-weight: 800; }
+    .thank-you strong { display: block; font: 700 16px 'Fredoka', 'Nunito', sans-serif; }
+    .thank-you-copy span { display: block; margin-top: 3px; color: #6d7868; font-size: 10px; }
+    .materials { margin-top: 18px; border-top: 1px solid var(--line); }
+    .material { padding: 19px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+    .material p { margin: 4px 0 0; font-size: 11px; }
+    .lesson { grid-column: 1 / -1; padding: 13px 0 0; border-top: 1px solid var(--line); }
+    .lesson summary { color: #456b4c; font-size: 12px; font-weight: 800; cursor: pointer; }
+    video { display: block; width: min(100%, 620px); max-height: 430px; margin-top: 12px; border-radius: 6px; background: #211e1a; }
+    .empty-video { color: var(--muted); font-size: 11px; }
+    @keyframes thank-you-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes thank-you-logo { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+    .page-footer { margin-top: 26px; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    @media (max-width: 680px) {
+      header { padding: 8px 17px; }
+      main { margin-top: 22px; }
+      .pending { grid-template-columns: 1fr; gap: 14px; }
+      .qris { width: min(100%, 360px); margin: auto; }
+      .material { grid-template-columns: 1fr; align-items: start; }
+      .material .button { width: 100%; }
+      .order-meta { align-items: flex-start; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header><a class="brand" href="/" aria-label="Kembali ke ngemilssby.mima"><img src="/brand-logo.png?v=logo-2" alt=""><span>ngemilssby.mima<br>Ruang resep pribadimu</span></a></header>
+  <main>
+    <a class="back" href="/">← Kembali ke toko</a>
+    <span class="eyebrow">PESANAN RESEP</span>
+    <h1 id="page-title">Membuka pesanan...</h1>
+    <p class="intro" id="page-description">Memeriksa status dan materi pesanan Anda.</p>
+    <div class="order-meta">
+      <span class="state" id="order-state">Memuat</span>
+      <span class="order-number">Nomor pesanan: <strong id="order-number"></strong></span>
+      <button class="button secondary" id="copy-link" type="button">Salin tautan akses</button>
+    </div>
+    <p class="status-message" id="status-message" role="status" aria-live="polite"></p>
+    <div class="buyer-disclaimer"><strong>PENTING UNTUK PEMBELI</strong><br>1. Bayar sesuai jumlah yang tertera.<br>2. Setelah bayar, tunggu admin mengecek pembayaran.<br>3. Resep terbuka setelah pembayaran disetujui.<br>4. Simpan link halaman ini untuk membuka resep lagi.<br>5. Sudah bayar tapi resep belum terbuka? Kirim nomor pesanan dan bukti bayar ke Instagram <strong>@ngemilss.bymima</strong>.</div>
+    <section class="pending" id="pending-panel" hidden>
+      <div class="payment-copy"><h2>Bayar dengan QRIS</h2><p>Scan QRIS dengan aplikasi bank atau e-wallet. Resep akan terbuka di halaman ini setelah pembayaran dicocokkan dan dikonfirmasi toko. Simpan tautan akses untuk membuka pesanan ini lagi.</p><p><button class="button secondary" id="check-payment" type="button">Periksa status pembayaran</button></p></div>
+      <div class="qris"><img src="/qris.png" alt="QRIS toko untuk pembayaran pesanan"><p class="qris-total">Nominal QRIS (Rupiah)<strong id="order-total">Rp0</strong></p><p class="qris-total" id="order-myr-wrap" hidden>Perkiraan dalam Ringgit<strong id="order-total-myr"></strong></p><p class="qris-number">Nomor pesanan<br><strong id="qris-order-number"></strong></p></div>
+    </section>
+    <section class="paid" id="paid-panel" hidden>
+      <div class="thank-you"><img src="/brand-logo.png?v=logo-2" alt="Logo Ngemilss by MIMA"><div class="thank-you-copy"><strong>Terima kasih!</strong><span>Terima kasih sudah melakukan transaksi di ngemilssbymima.</span></div><span class="thank-you-mark" aria-hidden="true">✓</span></div>
+      <h2>Resep sudah tersedia</h2>
+      <p>Anda bisa kembali ke halaman ini lewat tautan akses untuk membuka atau mengunduh materi lagi.</p>
+      <div class="materials" id="materials"></div>
+    </section>
+    <footer class="page-footer">Tautan ini bersifat pribadi. Jangan bagikan kepada orang lain.</footer>
+  </main>
+  <script>
+    const orderId = window.location.pathname.split('/').filter(Boolean).at(-1);
+    const accessToken = new URLSearchParams(window.location.search).get('token') || '';
+    const accessUrl = `${window.location.pathname}${window.location.search}`;
+    const state = document.getElementById('order-state');
+    const message = document.getElementById('status-message');
+    const pendingPanel = document.getElementById('pending-panel');
+    const paidPanel = document.getElementById('paid-panel');
+    let stopped = false;
+
+    document.getElementById('copy-link').addEventListener('click', async event => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        event.currentTarget.textContent = 'Tautan tersalin';
+      } catch {
+        message.textContent = 'Salin tautan dari bilah alamat browser untuk menyimpan akses.';
+      }
+    });
+    document.getElementById('check-payment').addEventListener('click', () => { stopped = false; loadOrder(); });
+
+    function showError(text) {
+      state.textContent = 'Tautan tidak valid';
+      state.classList.remove('paid');
+      document.getElementById('page-title').textContent = 'Pesanan tidak ditemukan';
+      document.getElementById('page-description').textContent = text;
+      pendingPanel.hidden = true;
+      paidPanel.hidden = true;
+      document.getElementById('copy-link').hidden = true;
+    }
+
+    function renderMaterials(items) {
+      const materials = document.getElementById('materials');
+      materials.replaceChildren();
+      for (const item of items) {
+        const section = document.createElement('article');
+        section.className = 'material';
+        const copy = document.createElement('div');
+        const title = document.createElement('h3');
+        title.textContent = item.title;
+        const description = document.createElement('p');
+        description.textContent = `${item.quantity} resep · PDF lengkap`;
+        copy.append(title, description);
+        const download = document.createElement('a');
+        download.className = 'button';
+        download.href = item.pdfUrl;
+        download.textContent = 'Unduh PDF';
+        download.setAttribute('download', `${item.courseId}.pdf`);
+        section.append(copy, download);
+
+        for (const video of item.videos) {
+          const lesson = document.createElement('details');
+          lesson.className = 'lesson';
+          const summary = document.createElement('summary');
+          summary.textContent = `▶ ${video.title}`;
+          const player = document.createElement('video');
+          player.controls = true;
+          player.preload = 'none';
+          player.playsInline = true;
+          player.src = video.url;
+          player.setAttribute('aria-label', `${item.title}: ${video.title}`);
+          lesson.append(summary, player);
+          section.append(lesson);
+        }
+        materials.append(section);
+      }
+    }
+
+    async function loadOrder() {
+      if (!orderId || !accessToken) return showError('Tautan akses tidak lengkap. Gunakan tautan pesanan yang diberikan setelah checkout.');
+      try {
+        const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/access?token=${encodeURIComponent(accessToken)}`, { cache: 'no-store' });
+        if (!response.ok) return showError('Tautan ini salah atau sudah tidak berlaku. Hubungi toko jika perlu bantuan.');
+        const order = await response.json();
+        localStorage.setItem('dapur-rasa-last-order-url', accessUrl);
+        document.getElementById('order-number').textContent = order.orderId;
+        document.getElementById('qris-order-number').textContent = order.orderId;
+        document.getElementById('order-total').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(order.total);
+        if (order.customerCountry === 'MY') {
+          document.getElementById('order-total-myr').textContent = new Intl.NumberFormat('ms-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 2 }).format(order.totalMyr);
+          document.getElementById('order-myr-wrap').hidden = false;
+        }
+        if (order.paymentVerified) {
+          state.textContent = 'Pembayaran terverifikasi';
+          state.classList.add('paid');
+          document.getElementById('page-title').textContent = 'Resepmu sudah terbuka';
+          document.getElementById('page-description').textContent = 'Semua materi pesanan dapat dibuka kembali melalui tautan privat ini.';
+          message.textContent = 'Pembayaran telah dikonfirmasi oleh toko.';
+          pendingPanel.hidden = true;
+          paidPanel.hidden = false;
+          renderMaterials(order.items);
+          stopped = true;
+          return;
+        }
+        state.textContent = 'Menunggu pembayaran';
+        state.classList.remove('paid');
+        document.getElementById('page-title').textContent = 'Selesaikan pembayaran';
+        document.getElementById('page-description').textContent = 'Resep akan terbuka setelah pembayaran QRIS Anda dikonfirmasi.';
+        message.textContent = 'Status diperiksa otomatis setiap beberapa detik.';
+        pendingPanel.hidden = false;
+        paidPanel.hidden = true;
+        if (!stopped) window.setTimeout(loadOrder, 5000);
+      } catch {
+        message.textContent = 'Belum bisa memeriksa pesanan. Halaman akan mencoba lagi.';
+        if (!stopped) window.setTimeout(loadOrder, 5000);
+      }
+    }
+    loadOrder();
+  </script>
+</body>
+</html>
