@@ -479,7 +479,7 @@
       ? ringgit(course.priceMalaysiaMyr * quantity)
       : rupiah(course.price * quantity);
     const displayCourseOldPrice = course => selectedCountry === 'MY'
-      ? ringgit(course.oldPriceMalaysiaMyr)
+      ? course.oldPriceMalaysiaMyr === null ? null : ringgit(course.oldPriceMalaysiaMyr)
       : rupiah(course.oldPrice);
     let cart = JSON.parse(localStorage.getItem('dapur-rasa-cart') || '[]');
     let activeCategory = 'Semua';
@@ -505,6 +505,7 @@
       'ayam-bawang-putih': 'Resep ayam gurih dilengkapi lima video panduan memasak.'
     };
     const coursePrice = course => selectedCountry === 'MY' ? course.priceMalaysia : course.price;
+    const courseOldPrice = course => selectedCountry === 'MY' ? course.oldPriceMalaysiaMyr : course.oldPrice;
     const savedOrderUrl = localStorage.getItem('dapur-rasa-last-order-url');
     if (savedOrderUrl?.startsWith('/pesanan/')) {
       resumeOrder.href = savedOrderUrl;
@@ -583,7 +584,7 @@
       grid.innerHTML = visible.length ? visible.map(course => `
           <article class="course-card ${course.image.startsWith('recipe-images/') ? 'course-card-poster' : ''} ${course.image === 'brand-logo.png' ? 'course-card-brand' : ''}">
           <div class="course-image"><img src="${courseImage(course)}" alt="${course.image === 'brand-logo.png' ? 'Logo Ngemilss by MIMA' : course.image.startsWith('recipe-images/') ? 'Foto produk' : 'Hidangan untuk kelas'} ${course.title}" loading="lazy"><span class="course-tag">${course.tag}</span><button class="course-heart ${savedCourses.includes(course.id) ? 'saved' : ''}" data-save="${course.id}" aria-label="${savedCourses.includes(course.id) ? 'Hapus dari' : 'Simpan ke'} favorit"><i data-lucide="heart"></i></button><button class="recipe-peek" type="button" data-preview="${course.id}" aria-label="Intip resep ${course.title}"><i data-lucide="sparkles"></i><span>Intip resep</span></button></div>
-          <div class="course-info"><div class="course-meta"><span>${course.category}</span><span class="course-format">${course.videoCount ? `PDF + ${course.videoCount} VIDEO` : 'FILE PDF'}</span></div><h3>${course.title}</h3><p>${courseHighlights[course.id] || course.description}</p><div class="course-bottom"><span class="${coursePrice(course) > 0 ? 'price' : 'price-pending'}">${coursePrice(course) > 0 ? displayCoursePrice(course) : 'Harga menyusul'}${coursePrice(course) > 0 ? `<small>${displayCourseOldPrice(course)}</small>` : ''}</span>${coursePrice(course) > 0 ? `<button class="add-btn" data-add="${course.id}" aria-label="Tambah ${course.title} ke keranjang"><i data-lucide="plus"></i></button>` : '<span class="course-pending">Belum bisa dibeli</span>'}</div></div>
+          <div class="course-info"><div class="course-meta"><span>${course.category}</span><span class="course-format">${course.videoCount ? `PDF + ${course.videoCount} VIDEO` : 'FILE PDF'}</span></div><h3>${course.title}</h3><p>${courseHighlights[course.id] || course.description}</p><div class="course-bottom"><span class="${coursePrice(course) > 0 ? 'price' : 'price-pending'}">${coursePrice(course) > 0 ? displayCoursePrice(course) : 'Harga menyusul'}${coursePrice(course) > 0 && courseOldPrice(course) ? `<small>${displayCourseOldPrice(course)}</small>` : ''}</span>${coursePrice(course) > 0 ? `<button class="add-btn" data-add="${course.id}" aria-label="Tambah ${course.title} ke keranjang"><i data-lucide="plus"></i></button>` : '<span class="course-pending">Belum bisa dibeli</span>'}</div></div>
         </article>`).join('') : '<div class="empty-state">Kelasnya belum ketemu. Coba kata pencarian lain, ya.</div>';
       lucide.createIcons();
     }

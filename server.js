@@ -95,7 +95,7 @@ function malaysiaPriceFor(course) {
   if (customPriceMyr !== null && customPriceMyr !== undefined && Number.isFinite(Number(customPriceMyr))) {
     const rate = Number.isFinite(malaysiaIdrPerMyr) && malaysiaIdrPerMyr > 0 ? malaysiaIdrPerMyr : 3500;
     return {
-      priceMalaysia: Math.ceil(Number(customPriceMyr) * rate / 1000) * 1000,
+      priceMalaysia: Math.round(Number(customPriceMyr) * rate / 1000) * 1000,
       priceMalaysiaMyr: Number(customPriceMyr)
     };
   }
@@ -289,10 +289,18 @@ const legacyRecipeImageAliases = {
 };
 
 const initialCourses = [
-  ['dubai-chewy-cookie', 'Dubai Chewy Cookie', 'Kue & Camilan', 'Resep PDF', 'Bahan & langkah', 0, 0, 18000, 24000, 'PDF Resep', 'recipe-images/dubai-chewy-cookie.png', 'File PDF resep Dubai Chewy Cookie.'],
-  ['es-pisang-hijoo', 'Es Pisang Hijoo', 'Dessert', 'Resep PDF', 'Bahan & langkah', 0, 0, 12000, 16000, 'PDF Resep', 'recipe-images/es-pisang-hijoo.png', 'File PDF resep Es Pisang Hijoo.'],
-  ['mangga-ketan-sticky-rice', 'Mangga & Nangka Sticky rice', 'Dessert', 'Resep PDF', 'Bahan & langkah', 0, 0, 15000, 21000, 'PDF Resep', 'recipe-images/mangga-ketan-sticky-rice.png', 'File PDF resep Mangga & Nangka Sticky rice.'],
-  ['ayam-bawang-putih', 'Ayam Bawang Putih', 'Masakan Gurih', 'Resep PDF', 'Bahan & langkah', 0, 0, 20000, 26000, 'PDF Resep', 'recipe-images/ayam-bawang-putih.png', 'File PDF resep Ayam Bawang Putih.']
+  ['dubai-chewy-cookie', 'Dubai Chewy Cookie', 'Kue & Camilan', 'Resep PDF', 'Bahan & langkah', 0, 0, 200000, 275000, formatMalaysiaPrice(300000), 'PDF Resep', 'recipe-images/dubai-chewy-cookie.png', 'File PDF resep Dubai Chewy Cookie.'],
+  ['es-pisang-hijoo', 'Es Pisang Hijoo', 'Dessert', 'Resep PDF', 'Bahan & langkah', 0, 0, 280000, 400000, formatMalaysiaPrice(850000), 'PDF Resep', 'recipe-images/es-pisang-hijoo.png', 'File PDF resep Es Pisang Hijoo.'],
+  ['mangga-ketan-sticky-rice', 'Mangga & Nangka Sticky rice', 'Dessert', 'Resep PDF', 'Bahan & langkah', 0, 0, 200000, 350000, formatMalaysiaPrice(450000), 'PDF Resep', 'recipe-images/mangga-ketan-sticky-rice.png', 'File PDF resep Mangga & Nangka Sticky rice.'],
+  ['ayam-bawang-putih', 'Ayam Bawang Putih', 'Masakan Gurih', 'Resep PDF', 'Bahan & langkah', 0, 0, 270000, 350000, formatMalaysiaPrice(650000), 'PDF Resep', 'recipe-images/ayam-bawang-putih.png', 'File PDF resep Ayam Bawang Putih.']
+];
+
+const recipePriceMigrations = [
+  ['dubai-chewy-cookie', 18000, 24000, 200000, 275000, 300000],
+  ['dubai-chewy-cookie', 20000, 24000, 200000, 275000, 300000],
+  ['es-pisang-hijoo', 12000, 16000, 280000, 400000, 850000],
+  ['mangga-ketan-sticky-rice', 15000, 21000, 200000, 350000, 450000],
+  ['ayam-bawang-putih', 20000, 26000, 270000, 350000, 650000]
 ];
 
 const existingCourseIds = database.prepare('SELECT id FROM courses').all().map(course => course.id);
@@ -301,8 +309,8 @@ const matchesIds = (left, right) => left.length === right.length && [...left].so
 
 if (existingCourseIds.length === 0 || matchesIds(existingCourseIds, legacyCourseIds)) {
   const insertCourse = database.prepare(`
-    INSERT INTO courses (id, title, category, level, duration, rating, students, price, old_price, tag, image, description, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO courses (id, title, category, level, duration, rating, students, price, old_price, price_myr, tag, image, description, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   database.exec('BEGIN IMMEDIATE');
   try {
@@ -313,6 +321,13 @@ if (existingCourseIds.length === 0 || matchesIds(existingCourseIds, legacyCourse
     database.exec('ROLLBACK');
     throw error;
   }
+}
+const updateLegacyPrices = database.prepare(`
+  UPDATE courses SET price = ?, old_price = ?, price_myr = ?
+  WHERE id = ? AND price = ? AND old_price = ? AND price_myr IS NULL
+`);
+for (const [id, previousPrice, previousOldPrice, price, oldPrice, malaysiaPriceIdr] of recipePriceMigrations) {
+  updateLegacyPrices.run(price, oldPrice, formatMalaysiaPrice(malaysiaPriceIdr), id, previousPrice, previousOldPrice);
 }
 database.prepare('UPDATE courses SET image = ? WHERE id = ?').run('recipe-images/dubai-chewy-cookie.png', 'dubai-chewy-cookie');
 database.prepare('UPDATE courses SET image = ? WHERE id = ?').run('recipe-images/es-pisang-hijoo.png', 'es-pisang-hijoo');
@@ -356,7 +371,9 @@ app.get('/api/courses', (_request, response) => {
     malaysiaIdrPerMyr,
     ...malaysiaPriceFor(course),
     oldPriceMalaysia: Math.ceil(course.oldPrice * supportedCountries.MY.multiplier / 1000) * 1000,
-    oldPriceMalaysiaMyr: formatMalaysiaPrice(Math.ceil(course.oldPrice * supportedCountries.MY.multiplier / 1000) * 1000),
+    oldPriceMalaysiaMyr: course.priceMalaysiaMyr === null
+      ? formatMalaysiaPrice(Math.ceil(course.oldPrice * supportedCountries.MY.multiplier / 1000) * 1000)
+      : null,
     videoCount: videoLessons[course.id]?.length || 0
   })));
 });
