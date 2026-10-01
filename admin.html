@@ -143,6 +143,7 @@
     if (savedPin) pinInput.value = savedPin;
 
     let lastSeenOrders = new Set();
+    let hasLoadedOrders = false;
     let livePollingTimer = null;
 
     function setNotice(message, type = '') {
@@ -211,24 +212,19 @@
     }
 
     function detectNewOrders(orders) {
-      if (!orders.length) {
-        lastSeenOrders.clear();
-        return;
-      }
-      const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
       const currentOrderIds = new Set(orders.map(order => order.id));
-      const previousOrderIds = lastSeenOrders;
-      const newOrders = orders.filter(order => !previousOrderIds.has(order.id));
+      const newOrders = hasLoadedOrders ? orders.filter(order => !lastSeenOrders.has(order.id)) : [];
 
-      if (previousOrderIds.size && newOrders.length) {
+      if (hasLoadedOrders && newOrders.length) {
         const first = newOrders[0];
         showLiveBanner(`Order baru dari ${first.customerName} · ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(first.total)}`);
       }
 
       lastSeenOrders = currentOrderIds;
-      if (!previousOrderIds.size && latest) {
+      if (!hasLoadedOrders && orders.length) {
         setNotice(`Tersedia ${orders.length} pesanan menunggu verifikasi.`, 'success');
       }
+      hasLoadedOrders = true;
     }
 
     async function adminRequest(url, options = {}) {
@@ -404,6 +400,8 @@
       tokenInput.value = '';
       pinInput.value = '';
       orderList.replaceChildren();
+      lastSeenOrders.clear();
+      hasLoadedOrders = false;
       if (livePollingTimer) clearInterval(livePollingTimer);
       setNotice('Token dan PIN admin dihapus dari sesi ini.');
     });
