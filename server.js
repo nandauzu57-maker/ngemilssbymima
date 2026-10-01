@@ -28,6 +28,7 @@ database.exec(`
     students INTEGER NOT NULL,
     price INTEGER NOT NULL CHECK (price >= 0),
     old_price INTEGER NOT NULL CHECK (old_price >= 0),
+    price_myr REAL CHECK (price_myr IS NULL OR price_myr >= 0),
     tag TEXT NOT NULL,
     image TEXT NOT NULL,
     description TEXT NOT NULL,
@@ -54,6 +55,10 @@ database.exec(`
   );
 `);
 
+const courseColumns = database.prepare('PRAGMA table_info(courses)').all();
+if (!courseColumns.some(column => column.name === 'price_myr')) {
+  database.exec('ALTER TABLE courses ADD COLUMN price_myr REAL');
+}
 const orderColumns = database.prepare('PRAGMA table_info(orders)').all();
 if (!orderColumns.some(column => column.name === 'payment_method')) {
   database.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'qris' CHECK (payment_method = 'qris')");
@@ -85,6 +90,18 @@ const supportedCountries = {
   MY: { name: 'Malaysia', multiplier: Number.isFinite(malaysiaPriceMultiplier) && malaysiaPriceMultiplier > 1 ? malaysiaPriceMultiplier : 1.35 }
 };
 const formatMalaysiaPrice = price => Math.round(price / (Number.isFinite(malaysiaIdrPerMyr) && malaysiaIdrPerMyr > 0 ? malaysiaIdrPerMyr : 3500) * 100) / 100;
+function malaysiaPriceFor(course) {
+  const customPriceMyr = course.priceMalaysiaMyr;
+  if (customPriceMyr !== null && customPriceMyr !== undefined && Number.isFinite(Number(customPriceMyr))) {
+    const rate = Number.isFinite(malaysiaIdrPerMyr) && malaysiaIdrPerMyr > 0 ? malaysiaIdrPerMyr : 3500;
+    return {
+      priceMalaysia: Math.ceil(Number(customPriceMyr) * rate / 1000) * 1000,
+      priceMalaysiaMyr: Number(customPriceMyr)
+    };
+  }
+  const priceMalaysia = Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000;
+  return { priceMalaysia, priceMalaysiaMyr: formatMalaysiaPrice(priceMalaysia) };
+}
 const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
@@ -328,7 +345,8 @@ app.get('/api/push/public-key', (_request, response) => {
 
 app.get('/api/courses', (_request, response) => {
   const courses = database.prepare(`
-    SELECT id, title, category, level, duration, rating, students, price,
+        SELECT id, title, category, level, duration, rating, students, price,
+          price_myr AS priceMalaysiaMyr,
            old_price AS oldPrice, tag, image, description
     FROM courses
     ORDER BY sort_order, title
@@ -336,9 +354,8 @@ app.get('/api/courses', (_request, response) => {
   response.set('Cache-Control', 'no-store').json(courses.map(course => ({
     ...course,
     malaysiaIdrPerMyr,
-    priceMalaysia: Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000,
+    ...malaysiaPriceFor(course),
     oldPriceMalaysia: Math.ceil(course.oldPrice * supportedCountries.MY.multiplier / 1000) * 1000,
-    priceMalaysiaMyr: formatMalaysiaPrice(Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000),
     oldPriceMalaysiaMyr: formatMalaysiaPrice(Math.ceil(course.oldPrice * supportedCountries.MY.multiplier / 1000) * 1000),
     videoCount: videoLessons[course.id]?.length || 0
   })));
@@ -448,13 +465,17 @@ function courseInput(request) {
   const description = typeof body.description === 'string' ? body.description.trim() : '';
   const price = Number(body.price);
   const oldPrice = Number(body.oldPrice || body.old_price || body.price);
+  const priceMalaysiaMyr = body.priceMalaysiaMyr === undefined || body.priceMalaysiaMyr === ''
+    ? null
+    : Number(body.priceMalaysiaMyr);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || id.length > 80) throw new Error('ID resep hanya boleh berisi huruf kecil, angka, dan tanda hubung.');
   if (title.length < 2 || title.length > 120) throw new Error('Judul resep harus 2 sampai 120 karakter.');
   if (category.length < 2 || category.length > 60) throw new Error('Kategori resep tidak valid.');
   if (!Number.isInteger(price) || price < 0 || price > 100000000) throw new Error('Harga resep tidak valid.');
   if (!Number.isInteger(oldPrice) || oldPrice < price || oldPrice > 100000000) throw new Error('Harga lama resep tidak valid.');
+  if (priceMalaysiaMyr !== null && (!Number.isFinite(priceMalaysiaMyr) || priceMalaysiaMyr < 0 || priceMalaysiaMyr > 100000)) throw new Error('Harga Malaysia (RM) tidak valid.');
   if (description.length > 500) throw new Error('Deskripsi resep terlalu panjang.');
-  return { id, title, category, price, oldPrice, description: description || `File PDF resep ${title}.` };
+  return { id, title, category, price, oldPrice, priceMalaysiaMyr, description: description || `File PDF resep ${title}.` };
 }
 
 function saveUpload(file, destination) {
@@ -519,13 +540,13 @@ function removeCourseImages(courseId) {
 
     app.get('/api/admin/courses', (_request, response) => {
       const courses = database.prepare(`
-        SELECT id, title, category, price, old_price AS oldPrice, description, image
+        SELECT id, title, category, price, price_myr AS priceMalaysiaMyr,
+               old_price AS oldPrice, description, image
         FROM courses ORDER BY sort_order, title
       `).all();
       response.set('Cache-Control', 'no-store').json({ courses: courses.map(course => ({
         ...course,
-        priceMalaysia: Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000,
-        priceMalaysiaMyr: formatMalaysiaPrice(Math.ceil(course.price * supportedCountries.MY.multiplier / 1000) * 1000),
+        ...malaysiaPriceFor(course),
         pdfExists: existsSync(path.join(recipeDirectory, `${course.id}.pdf`)),
         imageExists: course.image.startsWith('recipe-images/')
           ? existsSync(path.join(recipeImageDirectory, course.image.slice('recipe-images/'.length)))
@@ -546,9 +567,9 @@ function removeCourseImages(courseId) {
         saveUpload(pdf, path.join(recipeDirectory, `${course.id}.pdf`));
         saveUpload(image, recipeImagePath(course.id, extension));
         database.prepare(`
-          INSERT INTO courses (id, title, category, level, duration, rating, students, price, old_price, tag, image, description, sort_order)
-          VALUES (?, ?, ?, 'Resep PDF', 'Bahan & langkah', 0, 0, ?, ?, 'PDF Resep', ?, ?, ?)
-        `).run(course.id, course.title, course.category, course.price, course.oldPrice, `recipe-images/${course.id}.${extension}`, course.description, maxSort + 1);
+          INSERT INTO courses (id, title, category, level, duration, rating, students, price, old_price, price_myr, tag, image, description, sort_order)
+          VALUES (?, ?, ?, 'Resep PDF', 'Bahan & langkah', 0, 0, ?, ?, ?, 'PDF Resep', ?, ?, ?)
+        `).run(course.id, course.title, course.category, course.price, course.oldPrice, course.priceMalaysiaMyr, `recipe-images/${course.id}.${extension}`, course.description, maxSort + 1);
         response.status(201).json({ message: 'Resep berhasil ditambahkan.' });
       } catch (error) {
         response.status(400).json({ error: error.message || 'Resep gagal ditambahkan.' });
@@ -570,8 +591,8 @@ function removeCourseImages(courseId) {
           saveUpload(image, recipeImagePath(current.id, extension));
           imagePath = `recipe-images/${current.id}.${extension}`;
         }
-        database.prepare('UPDATE courses SET title = ?, category = ?, price = ?, old_price = ?, description = ?, image = ? WHERE id = ?')
-          .run(course.title, course.category, course.price, course.oldPrice, course.description, imagePath, current.id);
+        database.prepare('UPDATE courses SET title = ?, category = ?, price = ?, old_price = ?, price_myr = ?, description = ?, image = ? WHERE id = ?')
+          .run(course.title, course.category, course.price, course.oldPrice, course.priceMalaysiaMyr, course.description, imagePath, current.id);
         response.json({ message: 'Resep berhasil diperbarui.' });
       } catch (error) {
         response.status(400).json({ error: error.message || 'Resep gagal diperbarui.' });
@@ -658,12 +679,12 @@ function removeCourseImages(courseId) {
         quantities.set(item.courseId, quantity);
       }
 
-      const findCourse = database.prepare('SELECT id, title, price FROM courses WHERE id = ? AND price > 0');
+      const findCourse = database.prepare('SELECT id, title, price, price_myr AS priceMalaysiaMyr FROM courses WHERE id = ? AND price > 0');
       const orderItems = [];
       for (const [courseId, quantity] of quantities) {
         const course = findCourse.get(courseId);
         if (!course) return response.status(400).json({ error: 'Resep tidak tersedia untuk dibeli.' });
-        const unitPrice = Math.ceil(course.price * supportedCountries[country].multiplier / 1000) * 1000;
+        const unitPrice = country === 'MY' ? malaysiaPriceFor(course).priceMalaysia : course.price;
         orderItems.push({ ...course, price: unitPrice, quantity });
       }
 

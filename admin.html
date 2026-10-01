@@ -105,6 +105,7 @@
         <label>Kategori<input name="category" required maxlength="60" placeholder="Dessert"></label>
         <label>Harga jual<input name="price" type="number" min="0" required placeholder="15000"></label>
         <label>Harga lama<input name="oldPrice" type="number" min="0" required placeholder="20000"></label>
+        <label>Harga Malaysia (RM)<input name="priceMalaysiaMyr" type="number" min="0" max="100000" step="0.01" placeholder="Otomatis jika dikosongkan"></label>
         <label>PDF resep<input name="pdf" type="file" accept="application/pdf"></label>
         <label>Foto resep<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
         <label class="wide">Deskripsi<textarea name="description" maxlength="500" placeholder="Deskripsi singkat resep"></textarea></label>
@@ -359,7 +360,7 @@
         edit.textContent = 'Edit';
         edit.addEventListener('click', () => {
           editingCourseId = course.id;
-          for (const field of ['id', 'title', 'category', 'price', 'oldPrice', 'description']) courseForm.elements[field].value = course[field] || '';
+          for (const field of ['id', 'title', 'category', 'price', 'oldPrice', 'priceMalaysiaMyr', 'description']) courseForm.elements[field].value = course[field] ?? '';
           courseForm.elements.id.disabled = true;
           courseForm.elements.pdf.required = false;
           courseForm.elements.image.required = false;
