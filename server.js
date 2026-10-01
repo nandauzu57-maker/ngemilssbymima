@@ -91,7 +91,11 @@ const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
 
 async function supabaseRequest(resource, options = {}) {
-  if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase belum dikonfigurasi.');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    const error = new Error('Supabase belum dikonfigurasi.');
+    error.code = 'SUPABASE_NOT_CONFIGURED';
+    throw error;
+  }
   const result = await fetch(`${supabaseUrl}/rest/v1/${resource}`, {
     ...options,
     headers: {
@@ -101,7 +105,11 @@ async function supabaseRequest(resource, options = {}) {
       ...(options.headers || {})
     }
   });
-  if (!result.ok) throw new Error(`Supabase request gagal (${result.status}): ${await result.text()}`);
+  if (!result.ok) {
+    const error = new Error(`Supabase request gagal (${result.status}): ${await result.text()}`);
+    error.statusCode = result.status;
+    throw error;
+  }
   return result;
 }
 
@@ -486,7 +494,13 @@ function removeCourseImages(courseId) {
         response.status(201).json({ message: 'Perangkat berhasil didaftarkan untuk notifikasi.' });
       } catch (error) {
         console.error('Gagal menyimpan push subscription:', error.message);
-        response.status(503).json({ error: 'Penyimpanan notifikasi belum siap. Periksa konfigurasi Supabase.' });
+        const diagnostic = error.code || (error.statusCode
+          ? `SUPABASE_HTTP_${error.statusCode}`
+          : 'SUPABASE_CONNECTION_FAILED');
+        response.status(503).json({
+          error: 'Penyimpanan notifikasi belum siap. Periksa konfigurasi Supabase.',
+          diagnostic
+        });
       }
     });
 

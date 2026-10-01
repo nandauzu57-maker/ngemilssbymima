@@ -202,7 +202,8 @@
         notificationButton.textContent = 'Notifikasi aktif di perangkat ini';
         setNotice('Perangkat ini berhasil didaftarkan untuk menerima notifikasi order dan pembayaran.', 'success');
       } catch (error) {
-        setNotice(error.message || 'Notifikasi tidak dapat diaktifkan.', 'error');
+        const diagnostic = error.diagnostic ? ` Kode: ${error.diagnostic}.` : '';
+        setNotice(`${error.message || 'Notifikasi tidak dapat diaktifkan.'}${diagnostic}`, 'error');
         notificationButton.disabled = false;
       }
     }
@@ -257,7 +258,11 @@
         }
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'Permintaan gagal.');
+      if (!response.ok) {
+        const error = new Error(body.error || 'Permintaan gagal.');
+        error.diagnostic = body.diagnostic;
+        throw error;
+      }
       return body;
     }
     function makeOrder(order) {
