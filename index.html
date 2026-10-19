@@ -120,6 +120,9 @@
     .course-rating svg { width: 12px; height: 12px; fill: #e7a44e; color: #e7a44e; }
     .course-info h3 { margin: 10px 0 7px; font: 700 21px/1.2 var(--serif); }
     .course-info > p { min-height: 34px; flex: 1; margin-bottom: 15px; color: #74776d; font-size: 11px; line-height: 1.6; }
+    .course-contact { width: fit-content; display: inline-flex; align-items: center; gap: 6px; margin: -5px 0 13px; color: #456b4c; font-size: 10px; font-weight: 800; }
+    .course-contact svg { width: 14px; height: 14px; }
+    .course-contact:hover { color: #2f5137; text-decoration: underline; }
     .course-bottom { display: flex; align-items: center; justify-content: space-between; padding-top: 13px; border-top: 1px solid var(--line); }
     .price { font-size: 13px; font-weight: 700; }
     .price-pending { color: #827966; font-size: 11px; font-weight: 700; }
@@ -162,6 +165,8 @@
     .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
     .footer-links a { color: #fffaf2; font-size: 10px; font-weight: 700; transition: color .2s; }
     .footer-links a:hover { color: #f4c7a4; }
+    .footer-links a[href^="https://wa.me/"] { min-height: 36px; padding: 0 11px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgb(255 250 242 / 34%); border-radius: 5px; }
+    .footer-links a[href^="https://wa.me/"]:hover { border-color: rgb(255 250 242 / 70%); background: rgb(255 250 242 / 10%); }
     .footer-note { padding-top: 12px; border-top: 1px solid rgb(255 250 242 / 20%); color: #e1eadd; font-size: 9px; }
     .overlay { position: fixed; inset: 0; z-index: 10; background: rgb(20 26 21 / 45%); opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; }
     .overlay.open { opacity: 1; visibility: visible; }
@@ -580,7 +585,7 @@
       grid.innerHTML = visible.length ? visible.map(course => `
           <article class="course-card ${course.image.startsWith('recipe-images/') ? 'course-card-poster' : ''} ${course.image === 'brand-logo.png' ? 'course-card-brand' : ''}">
           <div class="course-image"><img src="${courseImage(course)}" alt="${course.image === 'brand-logo.png' ? 'Logo Ngemilss by MIMA' : course.image.startsWith('recipe-images/') ? 'Foto produk' : 'Hidangan untuk kelas'} ${course.title}" loading="lazy"><span class="course-tag">${course.tag}</span><button class="course-heart ${savedCourses.includes(course.id) ? 'saved' : ''}" data-save="${course.id}" aria-label="${savedCourses.includes(course.id) ? 'Hapus dari' : 'Simpan ke'} favorit"><i data-lucide="heart"></i></button><button class="recipe-peek" type="button" data-preview="${course.id}" aria-label="Intip resep ${course.title}"><i data-lucide="sparkles"></i><span>Intip resep</span></button></div>
-          <div class="course-info"><div class="course-meta"><span>${course.category}</span><span class="course-format">${course.videoCount ? `PDF + ${course.videoCount} VIDEO` : 'FILE PDF'}</span></div><h3>${course.title}</h3><p>${courseHighlights[course.id] || course.description}</p><div class="course-bottom"><span class="${coursePrice(course) > 0 ? 'price' : 'price-pending'}">${coursePrice(course) > 0 ? displayCoursePrice(course) : 'Harga menyusul'}${coursePrice(course) > 0 && courseOldPrice(course) ? `<small>${displayCourseOldPrice(course)}</small>` : ''}</span>${coursePrice(course) > 0 ? `<button class="add-btn" data-add="${course.id}" aria-label="Tambah ${course.title} ke keranjang"><i data-lucide="plus"></i></button>` : '<span class="course-pending">Belum bisa dibeli</span>'}</div></div>
+          <div class="course-info"><div class="course-meta"><span>${course.category}</span><span class="course-format">${course.videoCount ? `PDF + ${course.videoCount} VIDEO` : 'FILE PDF'}</span></div><h3>${course.title}</h3><p>${courseHighlights[course.id] || course.description}</p><a class="course-contact" href="https://wa.me/6281235456952?text=${encodeURIComponent(`Halo, saya ingin masuk kelas ${course.title}.`)}" target="_blank" rel="noopener noreferrer" aria-label="Tanya kelas ${course.title} via WhatsApp"><i data-lucide="message-circle"></i> Tanya via WhatsApp</a><div class="course-bottom"><span class="${coursePrice(course) > 0 ? 'price' : 'price-pending'}">${coursePrice(course) > 0 ? displayCoursePrice(course) : 'Harga menyusul'}${coursePrice(course) > 0 && courseOldPrice(course) ? `<small>${displayCourseOldPrice(course)}</small>` : ''}</span>${coursePrice(course) > 0 ? `<button class="add-btn" data-add="${course.id}" aria-label="Tambah ${course.title} ke keranjang"><i data-lucide="plus"></i></button>` : '<span class="course-pending">Belum bisa dibeli</span>'}</div></div>
         </article>`).join('') : '<div class="empty-state">Kelasnya belum ketemu. Coba kata pencarian lain, ya.</div>';
       lucide.createIcons();
     }
