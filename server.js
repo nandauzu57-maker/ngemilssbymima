@@ -467,6 +467,12 @@ const videoLessons = {
     { id: 'nasi-daun-jeruk', title: 'Pembuatan nasi daun jeruk', filename: 'PEMBUATAN NASI DAUN JERUK.mp4' },
     { id: 'sambal-bawang', title: 'Pembuatan sambal bawang', filename: 'VIDEO PEMBUATAN SAMBAL BAWANG BY MIMA.mp4' },
     { id: 'sambal-matah', title: 'Pembuatan sambal matah', filename: 'VIDEO PEMBUATAN SAMBAL MATAH.mp4' }
+  ],
+  'es-pisang-hijoo': [
+    { id: 'penyimpanan-pengukusan-pisang', title: 'Cara penyimpanan dan pengukusan pisang', filename: path.join('videos', 'es-pisang-hijoo', 'penyimpanan-pengukusan-pisang.mp4') },
+    { id: 'pengambilan-pisang-setelah-dikukus', title: 'Cara pengambilan pisang setelah dikukus', filename: path.join('videos', 'es-pisang-hijoo', 'pengambilan-pisang-setelah-dikukus.mp4') },
+    { id: 'pembuatan-bubur-sumsum', title: 'Pembuatan bubur sumsum', filename: path.join('videos', 'es-pisang-hijoo', 'pembuatan-bubur-sumsum.mp4') },
+    { id: 'pembuatan-sirup-pisang-ambon', title: 'Pembuatan sirup pisang Ambon', filename: path.join('videos', 'es-pisang-hijoo', 'pembuatan-sirup-pisang-ambon.mp4') }
   ]
 };
 
