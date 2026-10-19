@@ -66,6 +66,8 @@ Contoh body `POST /api/orders`:
 
 Katalog berisi empat PDF resep. Produk Ayam Bawang Putih dilengkapi lima video panduan: penggorengan ayam, nasi bejek, nasi daun jeruk, sambal bawang, dan sambal matah. Video marinasi ayam dan bayam crispy belum tersedia. Kelas Es Pisang Hijoo juga dilengkapi empat video panduan: penyimpanan dan pengukusan pisang, pengambilan pisang setelah dikukus, pembuatan bubur sumsum, dan pembuatan sirup pisang Ambon. Pembeli membuat pesanan pending lalu membayar menggunakan QRIS statis toko. Checkout mengembalikan `orderUrl` privat; pembeli sebaiknya menyimpan tautan tersebut. Karena QRIS statis tidak memberi notifikasi ke server, admin harus mencocokkan pembayaran lalu menekan konfirmasi. Setelah lunas, PDF dan video terbuka di portal dan dapat diakses lagi kapan saja. Email pembeli tidak diperlukan.
 
+Lima video Ayam Bawang Putih disimpan di bucket privat Supabase Storage bernama `paid-videos` agar tidak membebani paket fungsi Vercel. Server hanya membuat tautan video sementara setelah memverifikasi pembayaran. Portal pesanan menyediakan pemutar MP4 dan tombol unduh MP4; jangan jadikan bucket ini publik.
+
 1. Isi `ADMIN_TOKEN` dengan token acak yang kuat di `.env`. Jangan membagikan atau commit token.
 2. Pastikan QRIS toko tersedia di `assets/payments/qris.png`.
 3. Empat file PDF sudah disalin ke folder `recipes` dengan pemetaan berikut:

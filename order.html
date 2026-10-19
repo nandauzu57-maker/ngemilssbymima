@@ -60,6 +60,8 @@
     .lesson { grid-column: 1 / -1; padding: 13px 0 0; border-top: 1px solid var(--line); }
     .lesson summary { color: #456b4c; font-size: 12px; font-weight: 800; cursor: pointer; }
     video { display: block; width: min(100%, 620px); max-height: 430px; margin-top: 12px; border-radius: 6px; background: #211e1a; }
+    .video-status { margin: 8px 0 0; font-size: 11px; }
+    .video-download { margin-top: 10px; }
     .empty-video { color: var(--muted); font-size: 11px; }
     @keyframes thank-you-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes thank-you-logo { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
@@ -160,9 +162,23 @@
           player.controls = true;
           player.preload = 'none';
           player.playsInline = true;
-          player.src = video.url;
           player.setAttribute('aria-label', `${item.title}: ${video.title}`);
-          lesson.append(summary, player);
+          const source = document.createElement('source');
+          source.src = video.url;
+          source.type = 'video/mp4';
+          player.append(source);
+          const videoStatus = document.createElement('p');
+          videoStatus.className = 'video-status';
+          videoStatus.setAttribute('role', 'status');
+          videoStatus.hidden = true;
+          videoStatus.textContent = 'Video belum bisa diputar. Coba unduh file MP4.';
+          player.addEventListener('error', () => { videoStatus.hidden = false; });
+          const downloadVideo = document.createElement('a');
+          downloadVideo.className = 'button secondary video-download';
+          downloadVideo.href = video.downloadUrl;
+          downloadVideo.textContent = 'Unduh video MP4';
+          downloadVideo.setAttribute('download', `${video.title}.mp4`);
+          lesson.append(summary, player, videoStatus, downloadVideo);
           section.append(lesson);
         }
         materials.append(section);

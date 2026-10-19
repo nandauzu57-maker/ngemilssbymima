@@ -109,6 +109,8 @@ function malaysiaPriceFor(course) {
 const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const useSupabaseOrderStore = Boolean(process.env.VERCEL) || Boolean(supabaseUrl && supabaseServiceKey);
+const videoStorageBucket = 'paid-videos';
+const videoSignedUrlExpirationSeconds = 24 * 60 * 60;
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
 
@@ -133,6 +135,43 @@ async function supabaseRequest(resource, options = {}) {
     throw error;
   }
   return result;
+}
+
+async function createSignedVideoUrl(storagePath, downloadName) {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase Storage belum dikonfigurasi.');
+  }
+
+  const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/');
+  const result = await fetch(`${supabaseUrl}/storage/v1/object/sign/${videoStorageBucket}/${encodedPath}`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiresIn: videoSignedUrlExpirationSeconds })
+  });
+  if (!result.ok) {
+    throw new Error(`Supabase Storage gagal membuat tautan video (${result.status}): ${await result.text()}`);
+  }
+
+  const data = await result.json();
+  const signedPath = data.signedURL || data.signedUrl;
+  if (typeof signedPath !== 'string' || !signedPath) {
+    throw new Error('Supabase Storage tidak mengembalikan tautan video.');
+  }
+
+  const signedUrl = /^https?:\/\//i.test(signedPath)
+    ? new URL(signedPath)
+    : new URL(
+      signedPath.startsWith('/storage/v1/')
+        ? signedPath
+        : `/storage/v1/${signedPath.replace(/^\/+/, '')}`,
+      `${supabaseUrl}/`
+    );
+  if (downloadName) signedUrl.searchParams.set('download', downloadName);
+  return signedUrl.toString();
 }
 
 function mapSupabaseOrder(order) {
@@ -462,11 +501,11 @@ async function sendAdminOrderNotification(order) {
 
 const videoLessons = {
   'ayam-bawang-putih': [
-    { id: 'penggorengan-ayam', title: 'Penggorengan ayam', filename: 'VIDEO PENGGORENGAN AYAM.mp4' },
-    { id: 'nasi-bejek', title: 'Pembuatan nasi bejek', filename: 'VIDEO PEMBUATAN NASI BEJEK GURIH.mp4' },
-    { id: 'nasi-daun-jeruk', title: 'Pembuatan nasi daun jeruk', filename: 'PEMBUATAN NASI DAUN JERUK.mp4' },
-    { id: 'sambal-bawang', title: 'Pembuatan sambal bawang', filename: 'VIDEO PEMBUATAN SAMBAL BAWANG BY MIMA.mp4' },
-    { id: 'sambal-matah', title: 'Pembuatan sambal matah', filename: 'VIDEO PEMBUATAN SAMBAL MATAH.mp4' }
+    { id: 'penggorengan-ayam', title: 'Penggorengan ayam', filename: 'VIDEO PENGGORENGAN AYAM.mp4', storagePath: 'ayam-goreng.mp4' },
+    { id: 'nasi-bejek', title: 'Pembuatan nasi bejek', filename: 'VIDEO PEMBUATAN NASI BEJEK GURIH.mp4', storagePath: 'nasi-bejek-gurih.mp4' },
+    { id: 'nasi-daun-jeruk', title: 'Pembuatan nasi daun jeruk', filename: 'PEMBUATAN NASI DAUN JERUK.mp4', storagePath: 'nasi-daun-jeruk.mp4' },
+    { id: 'sambal-bawang', title: 'Pembuatan sambal bawang', filename: 'VIDEO PEMBUATAN SAMBAL BAWANG BY MIMA.mp4', storagePath: 'sambal-bawang.mp4' },
+    { id: 'sambal-matah', title: 'Pembuatan sambal matah', filename: 'VIDEO PEMBUATAN SAMBAL MATAH.mp4', storagePath: 'sambal-matah.mp4' }
   ],
   'es-pisang-hijoo': [
     { id: 'penyimpanan-pengukusan-pisang', title: 'Cara penyimpanan dan pengukusan pisang', filename: path.join('videos', 'es-pisang-hijoo', 'penyimpanan-pengukusan-pisang.mp4') },
@@ -590,7 +629,19 @@ app.get('/watch/:orderId/:videoId', async (request, response) => {
   if (!belongsToOrder) return response.status(404).send('Video tidak termasuk dalam pesanan ini.');
 
   response.set('Cache-Control', 'private, no-store').set('Referrer-Policy', 'no-referrer');
-  response.sendFile(path.join(__dirname, lesson.filename));
+  const localPath = path.join(__dirname, lesson.filename);
+  const downloadName = request.query.download === '1' ? `${lesson.title}.mp4` : null;
+  if (lesson.storagePath && (process.env.VERCEL || !existsSync(localPath))) {
+    try {
+      const signedUrl = await createSignedVideoUrl(lesson.storagePath, downloadName);
+      return response.redirect(302, signedUrl);
+    } catch (error) {
+      console.error('Gagal membuat tautan video privat:', error);
+      return response.status(502).send('Video sementara tidak dapat dibuka. Silakan coba lagi.');
+    }
+  }
+  if (downloadName) return response.download(lesson.filename, downloadName, { root: __dirname });
+  response.sendFile(lesson.filename, { root: __dirname });
 });
 
 app.get('/api/orders/:id/access', async (request, response) => {
@@ -610,7 +661,8 @@ app.get('/api/orders/:id/access', async (request, response) => {
       pdfUrl: paid ? `/api/orders/${encodeURIComponent(order.id)}/recipes/${encodeURIComponent(item.courseId)}?token=${encodeURIComponent(request.query.token)}` : null,
       videos: paid ? (videoLessons[item.courseId] || []).map(video => ({
         ...video,
-        url: `/watch/${encodeURIComponent(order.id)}/${encodeURIComponent(video.id)}?token=${encodeURIComponent(request.query.token)}`
+        url: `/watch/${encodeURIComponent(order.id)}/${encodeURIComponent(video.id)}?token=${encodeURIComponent(request.query.token)}`,
+        downloadUrl: `/watch/${encodeURIComponent(order.id)}/${encodeURIComponent(video.id)}?token=${encodeURIComponent(request.query.token)}&download=1`
       })) : []
     }))
   });
