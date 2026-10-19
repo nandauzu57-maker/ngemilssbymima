@@ -238,10 +238,11 @@
     .interaction-overlay.show { opacity: 1; visibility: visible; }
     .interaction-overlay img { position: absolute; left: var(--pointer-x, 50%); top: var(--pointer-y, 50%); width: 42px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; filter: saturate(.96) drop-shadow(0 5px 8px rgb(57 55 47 / 12%)); transform: translate(-50%, -50%) scale(.82) rotate(-4deg); opacity: 0; transition: left .07s linear, top .07s linear; will-change: left, top, transform; }
     .interaction-overlay.show img { opacity: 1; animation: overlay-logo-pop .55s cubic-bezier(.2, .8, .2, 1) both; }
-    .welcome-overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; align-content: center; gap: 12px; background: var(--paper); opacity: 1; visibility: visible; transition: opacity .35s ease, visibility .35s ease; }
+    .welcome-overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; align-content: center; gap: 12px; background: var(--paper); opacity: 1; visibility: visible; transition: opacity .25s ease, visibility .25s ease; animation: welcome-dismiss .25s .15s ease forwards; }
     .welcome-overlay.hide { opacity: 0; visibility: hidden; pointer-events: none; }
-    .welcome-overlay img { width: min(190px, 42vw); animation: welcome-logo-in .7s cubic-bezier(.2, .8, .2, 1) both, brand-float 3.8s .7s ease-in-out infinite; }
-    .welcome-overlay p { margin: 0; color: var(--green); font: 700 12px var(--serif); letter-spacing: .04em; animation: welcome-copy-in .7s .25s ease both; }
+    .welcome-overlay img { width: min(190px, 42vw); animation: welcome-logo-in .4s cubic-bezier(.2, .8, .2, 1) both, brand-float 3.8s .4s ease-in-out infinite; }
+    .welcome-overlay p { margin: 0; color: var(--green); font: 700 12px var(--serif); letter-spacing: .04em; animation: welcome-copy-in .35s .08s ease both; }
+    @keyframes welcome-dismiss { to { opacity: 0; visibility: hidden; pointer-events: none; } }
     @keyframes float-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes hero-rise { from { opacity: 0; transform: translateY(13px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes hero-title-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
@@ -365,10 +366,11 @@
       to { opacity: 1; transform: translateY(0); }
     }
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
     }
     @media (pointer: coarse) {
       .interaction-overlay img { transition-duration: .02s; }
+      .interaction-overlay { display: none; }
     }
     @media (hover: none) {
       .recipe-peek { opacity: 1; transform: none; }
@@ -491,11 +493,9 @@
     const checkoutModal = document.getElementById('checkout-modal');
     const recipePreview = document.getElementById('recipe-preview');
     const interactionOverlay = document.getElementById('interaction-overlay');
-    const welcomeOverlay = document.getElementById('welcome-overlay');
     const resumeOrder = document.getElementById('resume-order');
     let lastInteractionOverlay = 0;
     let interactionOverlayTimer;
-    window.setTimeout(() => welcomeOverlay.classList.add('hide'), 3000);
     const safeImage = id => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=700&q=80`;
     const courseImage = course => course.image === 'brand-logo.png' ? '/brand-logo.png?v=logo-2' : course.image.startsWith('recipe-images/') ? `/${course.image}` : safeImage(course.image);
     const courseHighlights = {
@@ -536,13 +536,9 @@
       interactionOverlayTimer = window.setTimeout(() => interactionOverlay.classList.remove('show'), 1800);
     }
 
-    function followTouch(event) {
-      const touch = event.touches[0];
-      if (touch) followPointer(touch);
-    }
-
-    document.addEventListener('pointermove', followPointer, { passive: true });
-    document.addEventListener('touchmove', followTouch, { passive: true });
+    document.addEventListener('pointermove', event => {
+      if (event.pointerType !== 'touch') followPointer(event);
+    }, { passive: true });
     document.addEventListener('pointerleave', () => interactionOverlay.classList.remove('show'), { passive: true });
 
     async function loadCourses() {
