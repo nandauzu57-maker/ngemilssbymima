@@ -474,7 +474,7 @@
     <section class="recipe-preview-modal" role="dialog" aria-modal="true" aria-labelledby="preview-title">
       <button class="recipe-preview-close" id="close-recipe-preview" aria-label="Tutup pratinjau"><i data-lucide="x"></i></button>
       <div class="recipe-preview-media"><img id="preview-image" alt=""><span class="recipe-preview-ribbon">RESEP PILIHAN MIMA</span></div>
-      <div class="recipe-preview-copy"><span class="eyebrow" id="preview-category"></span><h2 id="preview-title"></h2><p id="preview-description"></p><section class="recipe-preview-details" id="pisjo-course-details" hidden><h3>Materi Kelas Pisang Hijoo</h3><h4>File Bahan &amp; Cara Pembuatan</h4><ul><li>Pembuatan Kulit Pisang Hijoo</li><li>Pembuatan Bubur Sumsum</li><li>Pembuatan Mutiara</li><li>Pembuatan Sirup Pisang Ambon</li><li>Pembuatan Bubur Ketan Hitam</li></ul><h4>Materi Video</h4><ul><li>Pembuatan Kulit Pisang Hijoo</li><li>Pembuatan Bubur Sumsum</li><li>Pembuatan Bubur Ketan Hitam</li><li>Pembuatan Mutiara</li><li>Pembuatan Sirup Pisang Ambon</li><li>Pembentukan Pisang</li></ul><p class="recipe-preview-note">Zoom tersedia bagi yang ingin penjelasan lebih jelas dan bersifat tidak wajib.</p></section><div class="recipe-preview-format"><i data-lucide="file-text"></i><span>Resep lengkap tersedia dalam format PDF</span></div><button class="button-primary" id="close-preview-button" type="button">Lanjut jelajahi <i data-lucide="arrow-right"></i></button></div>
+      <div class="recipe-preview-copy"><span class="eyebrow" id="preview-category"></span><h2 id="preview-title"></h2><p id="preview-description"></p><section class="recipe-preview-details" id="pisjo-course-details" hidden><h3>Materi Kelas Pisang Hijoo</h3><h4>File Bahan &amp; Cara Pembuatan</h4><ul><li>Pembuatan Kulit Pisang Hijoo</li><li>Pembuatan Bubur Sumsum</li><li>Pembuatan Mutiara</li><li>Pembuatan Sirup Pisang Ambon</li><li>Pembuatan Bubur Ketan Hitam</li></ul><h4>Materi Video</h4><ul><li>Pembuatan Kulit Pisang Hijoo</li><li>Pembuatan Bubur Sumsum</li><li>Pembuatan Bubur Ketan Hitam</li><li>Pembuatan Mutiara</li><li>Pembuatan Sirup Pisang Ambon</li><li>Pembentukan Pisang</li></ul><p class="recipe-preview-note">Zoom tersedia bagi yang ingin penjelasan lebih jelas dan bersifat tidak wajib.</p></section><section class="recipe-preview-details" id="ayam-course-details" hidden><h3>Materi Kelas Ayam Bawang Putih</h3><ul><li>Resep Ayam Bawang Putih</li><li>Resep Bayam Crispy</li><li>Resep Sambal Bawang</li><li>Resep Sambal Matah</li><li>Resep Nasi Bejek</li><li>Resep Nasi Daun Jeruk</li><li>Video Penggorengan Ayam</li></ul><p class="recipe-preview-note">Sudah termasuk video pembuatan untuk setiap resep ya 🫶🏻</p></section><div class="recipe-preview-format"><i data-lucide="file-text"></i><span>Resep lengkap tersedia dalam format PDF</span></div><button class="button-primary" id="close-preview-button" type="button">Lanjut jelajahi <i data-lucide="arrow-right"></i></button></div>
     </section>
   </div>
   <div class="toast" id="toast" role="status"></div>
@@ -512,7 +512,7 @@
       'dubai-chewy-cookie': 'Cookies chewy bercokelat, cocok untuk camilan rumahan.',
       'es-pisang-hijoo': 'Kelas Pisang Hijoo mencakup file bahan dan cara pembuatan, daftar video panduan, serta Zoom opsional.',
       'mangga-ketan-sticky-rice': 'Mangga manis, ketan pulen, dan fla rumahan dalam satu dessert.',
-      'ayam-bawang-putih': 'Resep ayam gurih dilengkapi lima video panduan memasak.'
+      'ayam-bawang-putih': 'Kelas ini mencakup enam resep pilihan, video penggorengan ayam, dan video pembuatan untuk setiap resep.'
     };
     const coursePrice = course => selectedCountry === 'MY' ? course.priceMalaysia : course.price;
     const courseOldPrice = course => selectedCountry === 'MY' ? course.oldPriceMalaysiaMyr : course.oldPrice;
@@ -633,6 +633,7 @@
       document.getElementById('preview-title').textContent = course.title;
       document.getElementById('preview-description').textContent = courseHighlights[course.id] || course.description;
       document.getElementById('pisjo-course-details').hidden = course.id !== 'es-pisang-hijoo';
+      document.getElementById('ayam-course-details').hidden = course.id !== 'ayam-bawang-putih';
       recipePreview.querySelector('.recipe-preview-format span').textContent = course.videoCount
         ? `Resep PDF + ${course.videoCount} video terbuka di portal setelah pembayaran dikonfirmasi.`
         : 'Resep lengkap tersedia dalam format PDF';
