@@ -510,7 +510,9 @@ const videoLessons = {
   'es-pisang-hijoo': [
     { id: 'penyimpanan-pengukusan-pisang', title: 'Cara penyimpanan dan pengukusan pisang', filename: path.join('videos', 'es-pisang-hijoo', 'penyimpanan-pengukusan-pisang.mp4') },
     { id: 'pengambilan-pisang-setelah-dikukus', title: 'Cara pengambilan pisang setelah dikukus', filename: path.join('videos', 'es-pisang-hijoo', 'pengambilan-pisang-setelah-dikukus.mp4') },
+    { id: 'resep-kulit-metode-ulen-mixer', title: 'Resep kulit metode ulen mixer', filename: path.join('videos', 'es-pisang-hijoo', 'resep-kulit-metode-ulen-mixer.mp4'), storagePath: 'resep-kulit-metode-ulen-mixer.mp4' },
     { id: 'pembuatan-bubur-sumsum', title: 'Pembuatan bubur sumsum', filename: path.join('videos', 'es-pisang-hijoo', 'pembuatan-bubur-sumsum.mp4') },
+    { id: 'pembuatan-bubur-ketan-hitam', title: 'Pembuatan bubur ketan hitam', filename: path.join('videos', 'es-pisang-hijoo', 'pembuatan-bubur-ketan-hitam.mp4'), storagePath: 'pembuatan-bubur-ketan-hitam.mp4' },
     { id: 'pembuatan-sirup-pisang-ambon', title: 'Pembuatan sirup pisang Ambon', filename: path.join('videos', 'es-pisang-hijoo', 'pembuatan-sirup-pisang-ambon.mp4') }
   ]
 };
