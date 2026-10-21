@@ -504,6 +504,7 @@ const videoLessons = {
     { id: 'penggorengan-ayam', title: 'Penggorengan ayam', filename: 'VIDEO PENGGORENGAN AYAM.mp4', storagePath: 'ayam-goreng.mp4' },
     { id: 'nasi-bejek', title: 'Pembuatan nasi bejek', filename: 'VIDEO PEMBUATAN NASI BEJEK GURIH.mp4', storagePath: 'nasi-bejek-gurih.mp4' },
     { id: 'nasi-daun-jeruk', title: 'Pembuatan nasi daun jeruk', filename: 'PEMBUATAN NASI DAUN JERUK.mp4', storagePath: 'nasi-daun-jeruk.mp4' },
+    { id: 'bayam-crispy', title: 'Pembuatan bayam crispy', filename: 'VIDEO PEMBUATAN BAYAM CRISPY .mp4', storagePath: 'bayam-crispy.mp4' },
     { id: 'sambal-bawang', title: 'Pembuatan sambal bawang', filename: 'VIDEO PEMBUATAN SAMBAL BAWANG BY MIMA.mp4', storagePath: 'sambal-bawang.mp4' },
     { id: 'sambal-matah', title: 'Pembuatan sambal matah', filename: 'VIDEO PEMBUATAN SAMBAL MATAH.mp4', storagePath: 'sambal-matah.mp4' }
   ],
