@@ -167,7 +167,7 @@
     .footer-links a:hover { color: #f4c7a4; }
     .footer-links a[href^="https://wa.me/"] { min-height: 36px; padding: 0 11px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgb(255 250 242 / 34%); border-radius: 5px; }
     .footer-links a[href^="https://wa.me/"]:hover { border-color: rgb(255 250 242 / 70%); background: rgb(255 250 242 / 10%); }
-    .footer-note { padding-top: 12px; border-top: 1px solid rgb(255 250 242 / 20%); color: #e1eadd; font-size: 9px; }
+    .footer-note { width: 100%; display: block; padding-top: 12px; border-top: 1px solid rgb(255 250 242 / 20%); color: #e1eadd; font-size: 9px; }
     .overlay { position: fixed; inset: 0; z-index: 10; background: rgb(20 26 21 / 45%); opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s; }
     .overlay.open { opacity: 1; visibility: visible; }
     .cart-drawer { position: absolute; top: 0; right: 0; width: min(430px, 100%); height: 100%; background: var(--white); padding: 27px; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s; border-left: 3px solid #f3dfd4; box-shadow: -18px 0 40px rgb(57 55 47 / 8%); }
@@ -275,6 +275,12 @@
       .feature-side { width: 100%; flex-basis: auto; }
       .feature-stats { width: 100%; flex-basis: auto; }
       .footer { padding: 38px 24px; }
+      .footer-inner { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; }
+      .footer-branding { min-width: 0; }
+      .footer-right { width: 100%; min-width: 0; align-items: flex-start; }
+      .footer-links { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 8px 14px; }
+      .footer-links a { min-height: 34px; display: inline-flex; align-items: center; }
+      .footer-links a[href^="https://wa.me/"] { justify-content: center; white-space: nowrap; }
     }
     @media (max-width: 620px) {
       .topbar { height: 37px; font-size: 9px; }
@@ -328,12 +334,17 @@
       .stat { padding: 0 7px; }
       .stat strong { font-size: 24px; }
       .stat span { font-size: 9px; }
-      .footer { padding: 34px 19px; }
-      .footer-inner { grid-template-columns: 1fr; gap: 23px; }
-      .footer-branding { align-items: center; gap: 15px; }
-      .footer-brand .brand-logo { width: 76px; height: 76px; }
+      .footer { padding: 32px 20px; }
+      .footer-inner { gap: 22px; }
+      .footer-branding { align-items: flex-start; gap: 14px; }
+      .footer-brand .brand-logo { width: 64px; height: 64px; }
+      .footer-branding > div { min-width: 0; }
+      .footer-kicker { display: block; line-height: 1.5; letter-spacing: .03em; }
+      .footer p { max-width: 34ch; margin-top: 6px; font-size: 11px; line-height: 1.55; }
       .footer-right { align-items: flex-start; gap: 13px; }
-      .footer-links { gap: 16px; }
+      .footer-links { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+      .footer-links a { min-height: 36px; font-size: 11px; }
+      .footer-links a[href^="https://wa.me/"] { grid-column: 1 / -1; justify-content: flex-start; min-height: 46px; white-space: normal; }
       .footer-note { font-size: 9px; }
       .cart-drawer { padding: 21px; }
     }
