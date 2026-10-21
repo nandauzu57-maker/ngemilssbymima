@@ -507,6 +507,11 @@ const videoLessons = {
     { id: 'sambal-bawang', title: 'Pembuatan sambal bawang', filename: 'VIDEO PEMBUATAN SAMBAL BAWANG BY MIMA.mp4', storagePath: 'sambal-bawang.mp4' },
     { id: 'sambal-matah', title: 'Pembuatan sambal matah', filename: 'VIDEO PEMBUATAN SAMBAL MATAH.mp4', storagePath: 'sambal-matah.mp4' }
   ],
+  'mangga-ketan-sticky-rice': [
+    { id: 'ketan-warna-warni', title: 'Pembuatan ketan warna-warni', filename: path.join('videos', 'mangga-ketan-sticky-rice', 'ketan-warna-warni.mp4'), storagePath: 'ketan-warna-warni.mp4' },
+    { id: 'vla-ketan', title: 'Pembuatan vla ketan', filename: path.join('videos', 'mangga-ketan-sticky-rice', 'vla-ketan.mp4'), storagePath: 'vla-ketan.mp4' },
+    { id: 'plating-mangga-nangka', title: 'Plating mangga & nangka sticky rice', filename: path.join('videos', 'mangga-ketan-sticky-rice', 'plating-mangga-nangka-sticky-rice.mp4'), storagePath: 'plating-mangga-nangka-sticky-rice.mp4' }
+  ],
   'es-pisang-hijoo': [
     { id: 'penyimpanan-pengukusan-pisang', title: 'Cara penyimpanan dan pengukusan pisang', filename: path.join('videos', 'es-pisang-hijoo', 'penyimpanan-pengukusan-pisang.mp4') },
     { id: 'pengambilan-pisang-setelah-dikukus', title: 'Cara pengambilan pisang setelah dikukus', filename: path.join('videos', 'es-pisang-hijoo', 'pengambilan-pisang-setelah-dikukus.mp4') },
